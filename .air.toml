@@ -1,0 +1,24 @@
+# Air configuration for live reloading
+root = "."
+tmp_dir = "tmp"
+
+[build]
+# Generate ent code before building to reflect schema changes
+pre_cmd = ["go generate ./ent"]
+cmd = "go build -o ./tmp/server ./cmd/server"
+bin = "./tmp/server"
+full_bin = ""
+include_ext = ["go", "mod", "sum", "env", "yaml", "yml"]
+exclude_dir = ["tmp", "bin", "deploy", ".git", "vendor"]
+exclude_regex = ["_test\\.go$"]
+delay = 1000
+send_interrupt = true
+kill_signal = "SIGINT"
+kill_delay = 500
+
+[log]
+time = true
+
+[env]
+GO111MODULE = "on"
+

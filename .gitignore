@@ -1,0 +1,22 @@
+# Binaries and runtime
+bin/
+tmp/
+.run/
+
+# Env and local configs
+.env
+.env.local
+
+# IDE/editor
+.vscode/
+.idea/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Coverage / build
+coverage/
+dist/
+

@@ -1,0 +1,19 @@
+[Unit]
+Description=Fiber Ent Apollo PG App
+Requires=fiber-ent-apollo-pg.socket
+After=network.target
+
+[Service]
+Environment=SOCKET_ACTIVATION=1
+Environment=APP_ENV=prod
+WorkingDirectory=/opt/fiber-ent-apollo-pg
+ExecStart=/opt/fiber-ent-apollo-pg/bin/server
+Restart=always
+RestartSec=2
+User=www-data
+Group=www-data
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
+
