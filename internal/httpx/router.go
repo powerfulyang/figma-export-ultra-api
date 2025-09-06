@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+    "github.com/gofiber/fiber/v2"
+    "github.com/samber/lo"
 
-	entlib "entgo.io/ent"
 	"fiber-ent-apollo-pg/ent"
 	"fiber-ent-apollo-pg/ent/post"
 	"fiber-ent-apollo-pg/ent/user"
@@ -21,10 +21,6 @@ type Providers struct {
 }
 
 func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
-	var p *Providers
-	if len(providers) > 0 {
-		p = providers[0]
-	}
 	app.Get("/health", func(c *fiber.Ctx) error { return OK(c, fiber.Map{"status": "ok"}) })
 
 	app.Get("/users", func(c *fiber.Ctx) error {
@@ -47,19 +43,17 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 		case "cursor":
 			keyset = true
 			s := pg.Sort
-			if s == "" {
-				s = "id:asc"
-			}
+			s = lo.Ternary(pg.Sort != "", pg.Sort, "id:asc")
 			if s != "id:asc" {
 				return BadRequest("cursor requires sort=id:asc", s)
 			}
 			if pg.CursorID != nil {
 				q = q.Where(user.IDGT(*pg.CursorID))
 			}
-			q = q.Order(entlib.Asc(user.FieldID)).Limit(pg.Limit)
+            q = q.Order(ent.Asc(user.FieldID)).Limit(pg.Limit)
 		case "snapshot":
 			keyset = true
-			q = q.Where(user.CreatedAtLTE(*pg.Snapshot)).Order(entlib.Desc(user.FieldCreatedAt), entlib.Desc(user.FieldID)).Limit(pg.Limit)
+            q = q.Where(user.CreatedAtLTE(*pg.Snapshot)).Order(ent.Desc(user.FieldCreatedAt), ent.Desc(user.FieldID)).Limit(pg.Limit)
 			if pg.CursorID != nil {
 				if pg.CursorTS != nil {
 					curTS := pg.CursorTS.UTC()
@@ -90,8 +84,7 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 			hasMore := len(users) == pg.Limit
 			if len(users) > 0 {
 				last := users[len(users)-1]
-				id := last.ID
-				nextCursor = &id
+				nextCursor = lo.ToPtr(last.ID)
 				nextCursorTS = last.CreatedAt.UTC().Format(time.RFC3339Nano)
 			}
 			meta := PageMeta{Limit: pg.Limit, Count: len(users), Cursor: pg.CursorID, NextCursor: nextCursor, HasMore: hasMore, Mode: "cursor"}
@@ -112,14 +105,14 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 		}
 
 		nextOff := pg.Offset + len(users)
-		meta := PageMeta{Limit: pg.Limit, Offset: pg.Offset, Count: len(users), NextOffset: &nextOff, HasMore: len(users) == pg.Limit, Mode: "offset"}
+		meta := PageMeta{Limit: pg.Limit, Offset: pg.Offset, Count: len(users), NextOffset: lo.ToPtr(nextOff), HasMore: len(users) == pg.Limit, Mode: "offset"}
 		if pg.WithTotal {
 			tq := client.User.Query()
 			if nameFilter != "" {
 				tq = tq.Where(user.NameContains(nameFilter))
 			}
 			if total, err := tq.Count(ctx); err == nil {
-				meta.Total = &total
+				meta.Total = lo.ToPtr(total)
 			}
 		}
 		return List(c, users, meta)
@@ -174,10 +167,10 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 			if pg.CursorID != nil {
 				q = q.Where(post.IDGT(*pg.CursorID))
 			}
-			q = q.Order(entlib.Asc(post.FieldID)).Limit(pg.Limit)
+            q = q.Order(ent.Asc(post.FieldID)).Limit(pg.Limit)
 		case "snapshot":
 			keyset = true
-			q = q.Where(post.CreatedAtLTE(*pg.Snapshot)).Order(entlib.Desc(post.FieldCreatedAt), entlib.Desc(post.FieldID)).Limit(pg.Limit)
+            q = q.Where(post.CreatedAtLTE(*pg.Snapshot)).Order(ent.Desc(post.FieldCreatedAt), ent.Desc(post.FieldID)).Limit(pg.Limit)
 			if pg.CursorID != nil {
 				if pg.CursorTS != nil {
 					curTS := pg.CursorTS.UTC()
@@ -187,10 +180,7 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 				}
 			}
 		default:
-			s := pg.Sort
-			if s == "" {
-				s = "created_at:desc"
-			}
+			s := lo.Ternary(pg.Sort != "", pg.Sort, "created_at:desc")
 			var err error
 			q, err = applyPostSort(q, s)
 			if err != nil {
@@ -210,8 +200,7 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 			hasMore := len(posts) == pg.Limit
 			if len(posts) > 0 {
 				last := posts[len(posts)-1]
-				id := last.ID
-				nextCursor = &id
+				nextCursor = lo.ToPtr(last.ID)
 				nextCursorTS = last.CreatedAt.UTC().Format(time.RFC3339Nano)
 			}
 			meta := PageMeta{Limit: pg.Limit, Count: len(posts), Cursor: pg.CursorID, NextCursor: nextCursor, HasMore: hasMore, Mode: "cursor"}
@@ -232,7 +221,7 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 		}
 
 		nextOff := pg.Offset + len(posts)
-		meta := PageMeta{Limit: pg.Limit, Offset: pg.Offset, Count: len(posts), NextOffset: &nextOff, HasMore: len(posts) == pg.Limit, Mode: "offset"}
+		meta := PageMeta{Limit: pg.Limit, Offset: pg.Offset, Count: len(posts), NextOffset: lo.ToPtr(nextOff), HasMore: len(posts) == pg.Limit, Mode: "offset"}
 		if pg.WithTotal {
 			tq := client.Post.Query()
 			if uid > 0 {
@@ -242,7 +231,7 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 				tq = tq.Where(post.TitleContains(search))
 			}
 			if total, err := tq.Count(ctx); err == nil {
-				meta.Total = &total
+				meta.Total = lo.ToPtr(total)
 			}
 		}
 		return List(c, posts, meta)
@@ -263,26 +252,16 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 		if err != nil {
 			return InternalError("create post failed", err.Error())
 		}
-		// Publish MQ event
-		if pvd := p; pvd != nil { /* shadow fix */
-		}
-		if p != nil && pvd := providers; pvd == nil { /* noop */
-		}
-		if p != nil { /* nop */
-		}
-		if p := p; p != nil { /* nop */
-		}
-		if p != nil { /* shadow */
-		}
-		if pvd := providers; pvd != nil && len(pvd) > 0 && pvd[0] != nil && pvd[0].MQ != nil {
-			evt := map[string]any{"type": "post.created", "id": p.ID, "user_id": p.UserID, "title": p.Title}
-			b, _ := json.Marshal(evt)
-			_ = pvd[0].MQ.Publish(ctx, "post.created", b)
-		}
+        // Publish MQ event
+        if len(providers) > 0 && providers[0] != nil && providers[0].MQ != nil {
+            evt := map[string]any{"type": "post.created", "id": p.ID, "user_id": body.UserID, "title": p.Title}
+            b, _ := json.Marshal(evt)
+            _ = providers[0].MQ.Publish(ctx, "post.created", b)
+        }
 		// Index into ES
-		if len(providers) > 0 && providers[0] != nil && providers[0].ES != nil {
-			_ = esx.IndexPost(ctx, providers[0].ES, "posts", esx.PostDoc{ID: p.ID, Title: p.Title, Content: p.Content, UserID: p.UserID, CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano)})
-		}
+        if len(providers) > 0 && providers[0] != nil && providers[0].ES != nil {
+            _ = esx.IndexPost(ctx, providers[0].ES, "posts", esx.PostDoc{ID: p.ID, Title: p.Title, Content: p.Content, UserID: body.UserID, CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano)})
+        }
 		return Created(c, p)
 	})
 
@@ -296,7 +275,7 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 			return BadRequest("q required", nil)
 		}
 		from := c.QueryInt("offset", 0)
-		size := clamp(c.QueryInt("limit", 20), 1, 100)
+        size := lo.Clamp(c.QueryInt("limit", 20), 1, 100)
 		ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 		defer cancel()
 		res, err := esx.SearchPosts(ctx, providers[0].ES, "posts", q, from, size)
@@ -307,12 +286,4 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 	})
 }
 
-func clamp(v, min, max int) int {
-	if v < min {
-		return min
-	}
-	if v > max {
-		return max
-	}
-	return v
-}
+// no local clamp; use lo.Clamp where needed

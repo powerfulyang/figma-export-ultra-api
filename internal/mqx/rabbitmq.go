@@ -1,10 +1,11 @@
 package mqx
 
 import (
-	"context"
-	"time"
+    "context"
+    "time"
 
-	amqp "github.com/rabbitmq/amqp091-go"
+    amqp "github.com/rabbitmq/amqp091-go"
+    "github.com/samber/lo"
 )
 
 type Publisher interface {
@@ -19,9 +20,7 @@ type RabbitPublisher struct {
 }
 
 func NewRabbitPublisher(url string, exchange string) (*RabbitPublisher, error) {
-	if exchange == "" {
-		exchange = "events"
-	}
+    exchange = lo.Ternary(exchange != "", exchange, "events")
 	conn, err := amqp.Dial(url)
 	if err != nil {
 		return nil, err

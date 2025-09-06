@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+    "github.com/samber/lo"
 )
 
 type CursorPayload struct {
@@ -32,7 +33,7 @@ type PagingParams struct {
 }
 
 func parsePaging(c *fiber.Ctx) (PagingParams, error) {
-	p := PagingParams{Limit: clamp(c.QueryInt("limit", 20), 1, 100)}
+    p := PagingParams{Limit: lo.Clamp(c.QueryInt("limit", 20), 1, 100)}
 	p.Offset = c.QueryInt("offset", 0)
 	rawCursor := c.Query("cursor", "")
 	p.Sort = c.Query("sort", "")
@@ -41,8 +42,7 @@ func parsePaging(c *fiber.Ctx) (PagingParams, error) {
 	// snapshot fixed window
 	snapshotStr := c.Query("snapshot", "")
 	if snapshotStr == "" && c.Query("fixed", "") == "true" {
-		now := time.Now().UTC()
-		p.Snapshot = &now
+		p.Snapshot = lo.ToPtr(time.Now().UTC())
 	} else if snapshotStr != "" {
 		ts, err := time.Parse(time.RFC3339Nano, snapshotStr)
 		if err != nil {
@@ -55,10 +55,10 @@ func parsePaging(c *fiber.Ctx) (PagingParams, error) {
 	if rawCursor != "" {
 		if id, err := strconv.Atoi(rawCursor); err == nil {
 			p.Mode = "cursor"
-			p.CursorID = &id
+			p.CursorID = lo.ToPtr(id)
 			if tsStr := c.Query("cursor_ts", ""); tsStr != "" {
 				if ts, err := time.Parse(time.RFC3339Nano, tsStr); err == nil {
-					p.CursorTS = &ts
+					p.CursorTS = lo.ToPtr(ts)
 				}
 			}
 		} else {
@@ -68,9 +68,9 @@ func parsePaging(c *fiber.Ctx) (PagingParams, error) {
 				return p, BadRequest("invalid cursor", rawCursor)
 			}
 			p.Mode = "cursor"
-			p.CursorID = &payload.ID
+			p.CursorID = lo.ToPtr(payload.ID)
 			t := payload.TS.UTC()
-			p.CursorTS = &t
+			p.CursorTS = lo.ToPtr(t)
 		}
 	}
 

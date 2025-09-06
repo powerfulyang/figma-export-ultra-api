@@ -1,9 +1,10 @@
 package config
 
 import (
-	"log"
-	"os"
-	"strconv"
+    "log"
+    "os"
+    "strconv"
+    "github.com/samber/lo"
 )
 
 type Config struct {
@@ -92,10 +93,8 @@ func Load() (*Config, *Store, func(), error) {
 }
 
 func getEnv(key, def string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return def
+    v := os.Getenv(key)
+    return lo.Ternary(v != "", v, def)
 }
 
 func getInt(key string, def int) int {

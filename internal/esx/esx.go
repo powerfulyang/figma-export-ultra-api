@@ -1,26 +1,32 @@
 package esx
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"strconv"
-	"strings"
+    "bytes"
+    "context"
+    "encoding/json"
+    "fmt"
+    "net/http"
+    "strconv"
+    "strings"
 
-	"fiber-ent-apollo-pg/internal/config"
-	es8 "github.com/elastic/go-elasticsearch/v8"
+    "fiber-ent-apollo-pg/internal/config"
+    es8 "github.com/elastic/go-elasticsearch/v8"
+    "github.com/elastic/go-elasticsearch/v8/esapi"
+    "github.com/samber/lo"
 )
 
 type Client = es8.Client
 
 func Open(cfg *config.Config) (*Client, func(), error) {
-	if strings.TrimSpace(cfg.ES.Addrs) == "" {
-		return nil, func() {}, nil
-	}
-	addrs := strings.Split(cfg.ES.Addrs, ",")
-	es, err := es8.NewClient(es8.Config{Addresses: addrs, Username: cfg.ES.Username, Password: cfg.ES.Password})
+    if strings.TrimSpace(cfg.ES.Addrs) == "" {
+        return nil, func() {}, nil
+    }
+    raw := strings.Split(cfg.ES.Addrs, ",")
+    addrs := lo.FilterMap(raw, func(s string, _ int) (string, bool) {
+        t := strings.TrimSpace(s)
+        return t, t != ""
+    })
+    es, err := es8.NewClient(es8.Config{Addresses: addrs, Username: cfg.ES.Username, Password: cfg.ES.Password})
 	if err != nil {
 		return nil, func() {}, err
 	}
@@ -72,4 +78,4 @@ func SearchPosts(ctx context.Context, es *Client, index string, query string, fr
 
 // helpers
 func strconvItoa(i int) string         { return strconv.Itoa(i) }
-func fmtError(res *es8.Response) error { return fmt.Errorf("es error: %s", res.String()) }
+func fmtError(res *esapi.Response) error { return fmt.Errorf("es error: %s", res.String()) }

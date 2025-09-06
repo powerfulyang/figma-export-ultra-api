@@ -22,10 +22,7 @@ func RegisterCommonMiddlewares(app *fiber.App) {
 		start := time.Now()
 		err := c.Next()
 		latency := time.Since(start)
-		rid := c.GetRespHeader("X-Request-ID")
-		if rid == "" {
-			rid = c.Get("X-Request-ID")
-		}
+		rid := requestID(c)
 		logx.L().Info("access",
 			"method", c.Method(),
 			"path", c.OriginalURL(),

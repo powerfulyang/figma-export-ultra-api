@@ -1,7 +1,8 @@
 package httpx
 
 import (
-	"github.com/gofiber/fiber/v2"
+    "github.com/gofiber/fiber/v2"
+    "github.com/samber/lo"
 )
 
 type PageMeta struct {
@@ -22,11 +23,8 @@ type PageMeta struct {
 }
 
 func requestID(c *fiber.Ctx) string {
-	rid := c.GetRespHeader("X-Request-ID")
-	if rid == "" {
-		rid = c.Get("X-Request-ID")
-	}
-	return rid
+    rid := c.GetRespHeader("X-Request-ID")
+    return lo.Ternary(rid != "", rid, c.Get("X-Request-ID"))
 }
 
 func envelope(status int, code, msg string, data any, meta any, c *fiber.Ctx) error {
