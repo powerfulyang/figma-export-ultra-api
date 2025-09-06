@@ -1,6 +1,6 @@
 SHELL := /bin/sh
 
-.PHONY: tidy gen run up down build start stop restart dev
+.PHONY: tidy gen run build dev lint test cover test-integration compose-up compose-down
 
 tidy:
 	go mod tidy
@@ -11,22 +11,27 @@ gen:
 run:
 	go run ./cmd/server
 
-up:
-	docker compose up -d
-
-down:
-	docker compose down -v
-
 build:
 	go build -o bin/server ./cmd/server
 
-start:
-	bash scripts/run.sh
-
-stop:
-	@if [ -f .run/server.pid ]; then kill `cat .run/server.pid` || true; fi
-
-restart: build start
-
 dev:
 	air -c .air.toml
+
+lint:
+	golangci-lint run
+
+test:
+	go test ./...
+
+cover:
+	go test -coverprofile=coverage.out ./... && go tool cover -func=coverage.out | tail -n 1
+
+# Integration tests require Docker; guarded by build tag
+test-integration:
+	go test -tags=integration ./...
+
+compose-up:
+	docker compose up -d
+
+compose-down:
+	docker compose down -v

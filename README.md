@@ -56,6 +56,17 @@ go run ./cmd/server
 - 创建文章：`POST http://localhost:8080/posts`，Body: `{ "title": "Hello", "content": "...", "user_id": 1 }`
  - 搜索文章（ES）：`GET http://localhost:8080/search/posts?q=hello&limit=20&offset=0`
 
+#### 快速验证（cURL 示例）
+- 健康检查
+  - `curl -s http://localhost:8080/health`
+- 创建用户并列出
+  - `curl -s -X POST http://localhost:8080/users -H "Content-Type: application/json" -d '{"name":"alice"}'`
+  - `curl -s "http://localhost:8080/users?limit=10&offset=0&sort=created_at:desc"`
+- 创建文章并列表（需替换 user_id）
+  - `curl -s -X POST http://localhost:8080/posts -H "Content-Type: application/json" -d '{"title":"hello","content":"world","user_id":1}'`
+  - `curl -s "http://localhost:8080/posts?limit=10&offset=0&sort=created_at:desc"`
+  - 光标模式：`curl -s "http://localhost:8080/posts?mode=cursor&sort=id:asc&limit=10"`
+
 ### Apollo 配置中心
 
 当 `APOLLO_ENABLE=true` 时，服务会连接 Apollo 并读取以下 Keys（在命名空间 `APOLLO_NAMESPACE` 中）：
@@ -108,6 +119,14 @@ go generate ./...
 
 # 整体运行
 go run ./cmd/server
+
+# Lint 与测试
+make lint           # 运行 golangci-lint
+make test           # 运行单测与 e2e（不含集成）
+make cover          # 输出覆盖率汇总
+
+# 集成测试（需要 Docker，本项目使用 Testcontainers）
+make test-integration  # -tags=integration 运行集成测试
 
 # 仅本地数据库
 docker compose up -d
