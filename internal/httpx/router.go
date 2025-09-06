@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
-    "github.com/gofiber/fiber/v2"
-    "github.com/samber/lo"
+	"github.com/gofiber/fiber/v2"
+	"github.com/samber/lo"
 
 	"fiber-ent-apollo-pg/ent"
 	"fiber-ent-apollo-pg/ent/post"
@@ -15,15 +15,28 @@ import (
 	"fiber-ent-apollo-pg/internal/mqx"
 )
 
+// Providers 包含外部服务的提供者
 type Providers struct {
 	MQ mqx.Publisher
 	ES *esx.Client
 }
 
+// Register 注册所有的HTTP路由
 func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
-	app.Get("/health", func(c *fiber.Ctx) error { return OK(c, fiber.Map{"status": "ok"}) })
+	app.Get("/health", healthHandler)
+	app.Get("/users", getUsersHandler(client))
+	app.Post("/users", createUserHandler(client))
+	app.Get("/posts", getPostsHandler(client))
+	app.Post("/posts", createPostHandler(client, providers...))
+	app.Get("/search/posts", searchPostsHandler(providers...))
+}
 
-	app.Get("/users", func(c *fiber.Ctx) error {
+func healthHandler(c *fiber.Ctx) error {
+	return OK(c, fiber.Map{"status": "ok"})
+}
+
+func getUsersHandler(client *ent.Client) fiber.Handler {
+	return func(c *fiber.Ctx) error {
 		ctx, cancel := context.WithTimeout(c.Context(), 3*time.Second)
 		defer cancel()
 
@@ -42,18 +55,17 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 		switch pg.Mode {
 		case "cursor":
 			keyset = true
-			s := pg.Sort
-			s = lo.Ternary(pg.Sort != "", pg.Sort, "id:asc")
+			s := lo.Ternary(pg.Sort != "", pg.Sort, "id:asc")
 			if s != "id:asc" {
 				return BadRequest("cursor requires sort=id:asc", s)
 			}
 			if pg.CursorID != nil {
 				q = q.Where(user.IDGT(*pg.CursorID))
 			}
-            q = q.Order(ent.Asc(user.FieldID)).Limit(pg.Limit)
+			q = q.Order(ent.Asc(user.FieldID)).Limit(pg.Limit)
 		case "snapshot":
 			keyset = true
-            q = q.Where(user.CreatedAtLTE(*pg.Snapshot)).Order(ent.Desc(user.FieldCreatedAt), ent.Desc(user.FieldID)).Limit(pg.Limit)
+			q = q.Where(user.CreatedAtLTE(*pg.Snapshot)).Order(ent.Desc(user.FieldCreatedAt), ent.Desc(user.FieldID)).Limit(pg.Limit)
 			if pg.CursorID != nil {
 				if pg.CursorTS != nil {
 					curTS := pg.CursorTS.UTC()
@@ -79,46 +91,15 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 		}
 
 		if keyset {
-			var nextCursor *int
-			var nextCursorTS string
-			hasMore := len(users) == pg.Limit
-			if len(users) > 0 {
-				last := users[len(users)-1]
-				nextCursor = lo.ToPtr(last.ID)
-				nextCursorTS = last.CreatedAt.UTC().Format(time.RFC3339Nano)
-			}
-			meta := PageMeta{Limit: pg.Limit, Count: len(users), Cursor: pg.CursorID, NextCursor: nextCursor, HasMore: hasMore, Mode: "cursor"}
-			if pg.CursorID != nil && pg.CursorTS != nil {
-				meta.CursorEnc = encodeCursor(*pg.CursorID, *pg.CursorTS)
-			}
-			if nextCursor != nil && len(users) > 0 {
-				meta.NextCursorEnc = encodeCursor(*nextCursor, users[len(users)-1].CreatedAt)
-			}
-			if pg.Snapshot != nil {
-				meta.Snapshot = pg.Snapshot.UTC().Format(time.RFC3339Nano)
-				if pg.CursorTS != nil {
-					meta.CursorTS = pg.CursorTS.UTC().Format(time.RFC3339Nano)
-				}
-				meta.NextCursorTS = nextCursorTS
-			}
-			return List(c, users, meta)
+			return buildKeysetResponse(c, users, &pg)
 		}
 
-		nextOff := pg.Offset + len(users)
-		meta := PageMeta{Limit: pg.Limit, Offset: pg.Offset, Count: len(users), NextOffset: lo.ToPtr(nextOff), HasMore: len(users) == pg.Limit, Mode: "offset"}
-		if pg.WithTotal {
-			tq := client.User.Query()
-			if nameFilter != "" {
-				tq = tq.Where(user.NameContains(nameFilter))
-			}
-			if total, err := tq.Count(ctx); err == nil {
-				meta.Total = lo.ToPtr(total)
-			}
-		}
-		return List(c, users, meta)
-	})
+		return buildOffsetResponse(c, users, &pg, client, nameFilter, "user")
+	}
+}
 
-	app.Post("/users", func(c *fiber.Ctx) error {
+func createUserHandler(client *ent.Client) fiber.Handler {
+	return func(c *fiber.Ctx) error {
 		var body struct {
 			Name string `json:"name"`
 		}
@@ -132,10 +113,11 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 			return InternalError("create user failed", err.Error())
 		}
 		return Created(c, u)
-	})
+	}
+}
 
-	// Posts APIs
-	app.Get("/posts", func(c *fiber.Ctx) error {
+func getPostsHandler(client *ent.Client) fiber.Handler {
+	return func(c *fiber.Ctx) error {
 		ctx, cancel := context.WithTimeout(c.Context(), 3*time.Second)
 		defer cancel()
 		uid := c.QueryInt("user_id", 0)
@@ -167,10 +149,10 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 			if pg.CursorID != nil {
 				q = q.Where(post.IDGT(*pg.CursorID))
 			}
-            q = q.Order(ent.Asc(post.FieldID)).Limit(pg.Limit)
+			q = q.Order(ent.Asc(post.FieldID)).Limit(pg.Limit)
 		case "snapshot":
 			keyset = true
-            q = q.Where(post.CreatedAtLTE(*pg.Snapshot)).Order(ent.Desc(post.FieldCreatedAt), ent.Desc(post.FieldID)).Limit(pg.Limit)
+			q = q.Where(post.CreatedAtLTE(*pg.Snapshot)).Order(ent.Desc(post.FieldCreatedAt), ent.Desc(post.FieldID)).Limit(pg.Limit)
 			if pg.CursorID != nil {
 				if pg.CursorTS != nil {
 					curTS := pg.CursorTS.UTC()
@@ -195,49 +177,15 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 		}
 
 		if keyset {
-			var nextCursor *int
-			var nextCursorTS string
-			hasMore := len(posts) == pg.Limit
-			if len(posts) > 0 {
-				last := posts[len(posts)-1]
-				nextCursor = lo.ToPtr(last.ID)
-				nextCursorTS = last.CreatedAt.UTC().Format(time.RFC3339Nano)
-			}
-			meta := PageMeta{Limit: pg.Limit, Count: len(posts), Cursor: pg.CursorID, NextCursor: nextCursor, HasMore: hasMore, Mode: "cursor"}
-			if pg.CursorID != nil && pg.CursorTS != nil {
-				meta.CursorEnc = encodeCursor(*pg.CursorID, *pg.CursorTS)
-			}
-			if nextCursor != nil && len(posts) > 0 {
-				meta.NextCursorEnc = encodeCursor(*nextCursor, posts[len(posts)-1].CreatedAt)
-			}
-			if pg.Snapshot != nil {
-				meta.Snapshot = pg.Snapshot.UTC().Format(time.RFC3339Nano)
-				if pg.CursorTS != nil {
-					meta.CursorTS = pg.CursorTS.UTC().Format(time.RFC3339Nano)
-				}
-				meta.NextCursorTS = nextCursorTS
-			}
-			return List(c, posts, meta)
+			return buildKeysetResponseForPosts(c, posts, &pg)
 		}
 
-		nextOff := pg.Offset + len(posts)
-		meta := PageMeta{Limit: pg.Limit, Offset: pg.Offset, Count: len(posts), NextOffset: lo.ToPtr(nextOff), HasMore: len(posts) == pg.Limit, Mode: "offset"}
-		if pg.WithTotal {
-			tq := client.Post.Query()
-			if uid > 0 {
-				tq = tq.Where(post.HasAuthorWith(user.IDEQ(uid)))
-			}
-			if search != "" {
-				tq = tq.Where(post.TitleContains(search))
-			}
-			if total, err := tq.Count(ctx); err == nil {
-				meta.Total = lo.ToPtr(total)
-			}
-		}
-		return List(c, posts, meta)
-	})
+		return buildOffsetResponseForPosts(c, posts, &pg, client, uid, search)
+	}
+}
 
-	app.Post("/posts", func(c *fiber.Ctx) error {
+func createPostHandler(client *ent.Client, providers ...*Providers) fiber.Handler {
+	return func(c *fiber.Ctx) error {
 		var body struct {
 			Title   string `json:"title"`
 			Content string `json:"content"`
@@ -252,21 +200,22 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 		if err != nil {
 			return InternalError("create post failed", err.Error())
 		}
-        // Publish MQ event
-        if len(providers) > 0 && providers[0] != nil && providers[0].MQ != nil {
-            evt := map[string]any{"type": "post.created", "id": p.ID, "user_id": body.UserID, "title": p.Title}
-            b, _ := json.Marshal(evt)
-            _ = providers[0].MQ.Publish(ctx, "post.created", b)
-        }
+		// Publish MQ event
+		if len(providers) > 0 && providers[0] != nil && providers[0].MQ != nil {
+			evt := map[string]any{"type": "post.created", "id": p.ID, "user_id": body.UserID, "title": p.Title}
+			b, _ := json.Marshal(evt)
+			_ = providers[0].MQ.Publish(ctx, "post.created", b)
+		}
 		// Index into ES
-        if len(providers) > 0 && providers[0] != nil && providers[0].ES != nil {
-            _ = esx.IndexPost(ctx, providers[0].ES, "posts", esx.PostDoc{ID: p.ID, Title: p.Title, Content: p.Content, UserID: body.UserID, CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano)})
-        }
+		if len(providers) > 0 && providers[0] != nil && providers[0].ES != nil {
+			_ = esx.IndexPost(ctx, providers[0].ES, "posts", esx.PostDoc{ID: p.ID, Title: p.Title, Content: p.Content, UserID: body.UserID, CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano)})
+		}
 		return Created(c, p)
-	})
+	}
+}
 
-	// ES search
-	app.Get("/search/posts", func(c *fiber.Ctx) error {
+func searchPostsHandler(providers ...*Providers) fiber.Handler {
+	return func(c *fiber.Ctx) error {
 		if len(providers) == 0 || providers[0] == nil || providers[0].ES == nil {
 			return OK(c, fiber.Map{"hits": []any{}})
 		}
@@ -275,7 +224,7 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 			return BadRequest("q required", nil)
 		}
 		from := c.QueryInt("offset", 0)
-        size := lo.Clamp(c.QueryInt("limit", 20), 1, 100)
+		size := lo.Clamp(c.QueryInt("limit", 20), 1, 100)
 		ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 		defer cancel()
 		res, err := esx.SearchPosts(ctx, providers[0].ES, "posts", q, from, size)
@@ -283,7 +232,100 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 			return InternalError("es search failed", err.Error())
 		}
 		return OK(c, res)
-	})
+	}
+}
+
+// buildKeysetResponse 构建基于游标的响应
+func buildKeysetResponse(c *fiber.Ctx, users []*ent.User, pg *PagingParams) error {
+	var nextCursor *int
+	var nextCursorTS string
+	hasMore := len(users) == pg.Limit
+	if len(users) > 0 {
+		last := users[len(users)-1]
+		nextCursor = lo.ToPtr(last.ID)
+		nextCursorTS = last.CreatedAt.UTC().Format(time.RFC3339Nano)
+	}
+	meta := PageMeta{Limit: pg.Limit, Count: len(users), Cursor: pg.CursorID, NextCursor: nextCursor, HasMore: hasMore, Mode: "cursor"}
+	if pg.CursorID != nil && pg.CursorTS != nil {
+		meta.CursorEnc = encodeCursor(*pg.CursorID, *pg.CursorTS)
+	}
+	if nextCursor != nil && len(users) > 0 {
+		meta.NextCursorEnc = encodeCursor(*nextCursor, users[len(users)-1].CreatedAt)
+	}
+	if pg.Snapshot != nil {
+		meta.Snapshot = pg.Snapshot.UTC().Format(time.RFC3339Nano)
+		if pg.CursorTS != nil {
+			meta.CursorTS = pg.CursorTS.UTC().Format(time.RFC3339Nano)
+		}
+		meta.NextCursorTS = nextCursorTS
+	}
+	return List(c, users, meta)
+}
+
+// buildOffsetResponse 构建基于偏移的响应
+func buildOffsetResponse(c *fiber.Ctx, users []*ent.User, pg *PagingParams, client *ent.Client, nameFilter, _ string) error {
+	nextOff := pg.Offset + len(users)
+	meta := PageMeta{Limit: pg.Limit, Offset: pg.Offset, Count: len(users), NextOffset: lo.ToPtr(nextOff), HasMore: len(users) == pg.Limit, Mode: "offset"}
+	if pg.WithTotal {
+		ctx, cancel := context.WithTimeout(c.Context(), 3*time.Second)
+		defer cancel()
+		tq := client.User.Query()
+		if nameFilter != "" {
+			tq = tq.Where(user.NameContains(nameFilter))
+		}
+		if total, err := tq.Count(ctx); err == nil {
+			meta.Total = lo.ToPtr(total)
+		}
+	}
+	return List(c, users, meta)
+}
+
+// buildKeysetResponseForPosts 构建帖子的基于游标的响应
+func buildKeysetResponseForPosts(c *fiber.Ctx, posts []*ent.Post, pg *PagingParams) error {
+	var nextCursor *int
+	var nextCursorTS string
+	hasMore := len(posts) == pg.Limit
+	if len(posts) > 0 {
+		last := posts[len(posts)-1]
+		nextCursor = lo.ToPtr(last.ID)
+		nextCursorTS = last.CreatedAt.UTC().Format(time.RFC3339Nano)
+	}
+	meta := PageMeta{Limit: pg.Limit, Count: len(posts), Cursor: pg.CursorID, NextCursor: nextCursor, HasMore: hasMore, Mode: "cursor"}
+	if pg.CursorID != nil && pg.CursorTS != nil {
+		meta.CursorEnc = encodeCursor(*pg.CursorID, *pg.CursorTS)
+	}
+	if nextCursor != nil && len(posts) > 0 {
+		meta.NextCursorEnc = encodeCursor(*nextCursor, posts[len(posts)-1].CreatedAt)
+	}
+	if pg.Snapshot != nil {
+		meta.Snapshot = pg.Snapshot.UTC().Format(time.RFC3339Nano)
+		if pg.CursorTS != nil {
+			meta.CursorTS = pg.CursorTS.UTC().Format(time.RFC3339Nano)
+		}
+		meta.NextCursorTS = nextCursorTS
+	}
+	return List(c, posts, meta)
+}
+
+// buildOffsetResponseForPosts 构建帖子的基于偏移的响应
+func buildOffsetResponseForPosts(c *fiber.Ctx, posts []*ent.Post, pg *PagingParams, client *ent.Client, uid int, search string) error {
+	nextOff := pg.Offset + len(posts)
+	meta := PageMeta{Limit: pg.Limit, Offset: pg.Offset, Count: len(posts), NextOffset: lo.ToPtr(nextOff), HasMore: len(posts) == pg.Limit, Mode: "offset"}
+	if pg.WithTotal {
+		ctx, cancel := context.WithTimeout(c.Context(), 3*time.Second)
+		defer cancel()
+		tq := client.Post.Query()
+		if uid > 0 {
+			tq = tq.Where(post.HasAuthorWith(user.IDEQ(uid)))
+		}
+		if search != "" {
+			tq = tq.Where(post.TitleContains(search))
+		}
+		if total, err := tq.Count(ctx); err == nil {
+			meta.Total = lo.ToPtr(total)
+		}
+	}
+	return List(c, posts, meta)
 }
 
 // no local clamp; use lo.Clamp where needed

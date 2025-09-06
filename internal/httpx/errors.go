@@ -1,10 +1,10 @@
 package httpx
 
 import (
-    "errors"
-    "net/http"
+	"errors"
+	"net/http"
 
-    "github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2"
 )
 
 // APIError is a structured application error with code and message.
@@ -17,15 +17,20 @@ type APIError struct {
 
 func (e *APIError) Error() string { return e.Message }
 
+// NewAPIError creates a new API error with the given HTTP status, code, message and details
 func NewAPIError(httpStatus int, code, msg string, details interface{}) *APIError {
 	return &APIError{HTTPStatus: httpStatus, Code: code, Message: msg, Details: details}
 }
 
-// Common helpers
+// BadRequest creates a 400 Bad Request error
 func BadRequest(msg string, details interface{}) error {
 	return NewAPIError(http.StatusBadRequest, "E_INVALID_PARAM", msg, details)
 }
+
+// NotFound creates a 404 Not Found error
 func NotFound(msg string) error { return NewAPIError(http.StatusNotFound, "E_NOT_FOUND", msg, nil) }
+
+// InternalError creates a 500 Internal Server Error
 func InternalError(msg string, details interface{}) error {
 	return NewAPIError(http.StatusInternalServerError, "E_INTERNAL", msg, details)
 }
@@ -36,30 +41,30 @@ func ErrorHandler() fiber.ErrorHandler {
 		// Fiber error
 		var fe *fiber.Error
 		if errors.As(err, &fe) {
-            return c.Status(fe.Code).JSON(fiber.Map{
-                "code":       httpStatusToCode(fe.Code),
-                "message":    fe.Message,
-                "request_id": requestID(c),
-            })
+			return c.Status(fe.Code).JSON(fiber.Map{
+				"code":       httpStatusToCode(fe.Code),
+				"message":    fe.Message,
+				"request_id": requestID(c),
+			})
 		}
 
 		// Application error
 		var ae *APIError
 		if errors.As(err, &ae) {
-            return c.Status(ae.HTTPStatus).JSON(fiber.Map{
-                "code":       ae.Code,
-                "message":    ae.Message,
-                "details":    ae.Details,
-                "request_id": requestID(c),
-            })
+			return c.Status(ae.HTTPStatus).JSON(fiber.Map{
+				"code":       ae.Code,
+				"message":    ae.Message,
+				"details":    ae.Details,
+				"request_id": requestID(c),
+			})
 		}
 
 		// Fallback
-        return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-            "code":       "E_INTERNAL",
-            "message":    "Internal Server Error",
-            "request_id": requestID(c),
-        })
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"code":       "E_INTERNAL",
+			"message":    "Internal Server Error",
+			"request_id": requestID(c),
+		})
 	}
 }
 

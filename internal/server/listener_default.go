@@ -1,3 +1,4 @@
+// Package server provides network listener functionality
 package server
 
 import (

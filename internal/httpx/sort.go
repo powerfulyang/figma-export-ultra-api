@@ -1,12 +1,13 @@
 package httpx
 
 import (
-    "strings"
+	"strings"
 
-    "github.com/samber/lo"
-    "fiber-ent-apollo-pg/ent"
-    "fiber-ent-apollo-pg/ent/post"
-    "fiber-ent-apollo-pg/ent/user"
+	"fiber-ent-apollo-pg/ent"
+	"fiber-ent-apollo-pg/ent/post"
+	"fiber-ent-apollo-pg/ent/user"
+
+	"github.com/samber/lo"
 )
 
 // Sort whitelist mapping for entities. Extend these maps to add new sortable fields safely.
@@ -20,15 +21,17 @@ type postSortApplier struct {
 	Desc func(*ent.PostQuery) *ent.PostQuery
 }
 
+// UserSortWhitelist defines allowed sort fields and their query modifiers for users
 var UserSortWhitelist = map[string]userSortApplier{
-    "created_at": {Asc: func(q *ent.UserQuery) *ent.UserQuery { return q.Order(ent.Asc(user.FieldCreatedAt)) }, Desc: func(q *ent.UserQuery) *ent.UserQuery { return q.Order(ent.Desc(user.FieldCreatedAt)) }},
-    "name":       {Asc: func(q *ent.UserQuery) *ent.UserQuery { return q.Order(ent.Asc(user.FieldName)) }, Desc: func(q *ent.UserQuery) *ent.UserQuery { return q.Order(ent.Desc(user.FieldName)) }},
-    "id":         {Asc: func(q *ent.UserQuery) *ent.UserQuery { return q.Order(ent.Asc(user.FieldID)) }, Desc: func(q *ent.UserQuery) *ent.UserQuery { return q.Order(ent.Desc(user.FieldID)) }},
+	"created_at": {Asc: func(q *ent.UserQuery) *ent.UserQuery { return q.Order(ent.Asc(user.FieldCreatedAt)) }, Desc: func(q *ent.UserQuery) *ent.UserQuery { return q.Order(ent.Desc(user.FieldCreatedAt)) }},
+	"name":       {Asc: func(q *ent.UserQuery) *ent.UserQuery { return q.Order(ent.Asc(user.FieldName)) }, Desc: func(q *ent.UserQuery) *ent.UserQuery { return q.Order(ent.Desc(user.FieldName)) }},
+	"id":         {Asc: func(q *ent.UserQuery) *ent.UserQuery { return q.Order(ent.Asc(user.FieldID)) }, Desc: func(q *ent.UserQuery) *ent.UserQuery { return q.Order(ent.Desc(user.FieldID)) }},
 }
 
+// PostSortWhitelist defines allowed sort fields and their query modifiers for posts
 var PostSortWhitelist = map[string]postSortApplier{
-    "created_at": {Asc: func(q *ent.PostQuery) *ent.PostQuery { return q.Order(ent.Asc(post.FieldCreatedAt)) }, Desc: func(q *ent.PostQuery) *ent.PostQuery { return q.Order(ent.Desc(post.FieldCreatedAt)) }},
-    "id":         {Asc: func(q *ent.PostQuery) *ent.PostQuery { return q.Order(ent.Asc(post.FieldID)) }, Desc: func(q *ent.PostQuery) *ent.PostQuery { return q.Order(ent.Desc(post.FieldID)) }},
+	"created_at": {Asc: func(q *ent.PostQuery) *ent.PostQuery { return q.Order(ent.Asc(post.FieldCreatedAt)) }, Desc: func(q *ent.PostQuery) *ent.PostQuery { return q.Order(ent.Desc(post.FieldCreatedAt)) }},
+	"id":         {Asc: func(q *ent.PostQuery) *ent.PostQuery { return q.Order(ent.Asc(post.FieldID)) }, Desc: func(q *ent.PostQuery) *ent.PostQuery { return q.Order(ent.Desc(post.FieldID)) }},
 }
 
 func parseSortSpec(spec string) (field string, asc bool, err error) {
@@ -37,10 +40,10 @@ func parseSortSpec(spec string) (field string, asc bool, err error) {
 	}
 	parts := strings.Split(spec, ":")
 	field = strings.TrimSpace(parts[0])
-    dir := lo.TernaryF(len(parts) > 1,
-        func() string { return strings.ToLower(strings.TrimSpace(parts[1])) },
-        func() string { return "asc" },
-    )
+	dir := lo.TernaryF(len(parts) > 1,
+		func() string { return strings.ToLower(strings.TrimSpace(parts[1])) },
+		func() string { return "asc" },
+	)
 	switch dir {
 	case "asc":
 		asc = true

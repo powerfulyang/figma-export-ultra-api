@@ -1,3 +1,4 @@
+// Package httpx provides HTTP handling utilities and middleware
 package httpx
 
 import (

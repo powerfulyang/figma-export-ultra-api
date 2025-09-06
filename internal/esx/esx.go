@@ -1,38 +1,43 @@
+// Package esx provides Elasticsearch client and indexing functionality
 package esx
 
 import (
-    "bytes"
-    "context"
-    "encoding/json"
-    "fmt"
-    "net/http"
-    "strconv"
-    "strings"
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
 
-    "fiber-ent-apollo-pg/internal/config"
-    es8 "github.com/elastic/go-elasticsearch/v8"
-    "github.com/elastic/go-elasticsearch/v8/esapi"
-    "github.com/samber/lo"
+	"fiber-ent-apollo-pg/internal/config"
+
+	es8 "github.com/elastic/go-elasticsearch/v8"
+	"github.com/elastic/go-elasticsearch/v8/esapi"
+	"github.com/samber/lo"
 )
 
+// Client is an alias for Elasticsearch v8 client
 type Client = es8.Client
 
+// Open creates a new Elasticsearch client based on configuration
 func Open(cfg *config.Config) (*Client, func(), error) {
-    if strings.TrimSpace(cfg.ES.Addrs) == "" {
-        return nil, func() {}, nil
-    }
-    raw := strings.Split(cfg.ES.Addrs, ",")
-    addrs := lo.FilterMap(raw, func(s string, _ int) (string, bool) {
-        t := strings.TrimSpace(s)
-        return t, t != ""
-    })
-    es, err := es8.NewClient(es8.Config{Addresses: addrs, Username: cfg.ES.Username, Password: cfg.ES.Password})
+	if strings.TrimSpace(cfg.ES.Addrs) == "" {
+		return nil, func() {}, nil
+	}
+	raw := strings.Split(cfg.ES.Addrs, ",")
+	addrs := lo.FilterMap(raw, func(s string, _ int) (string, bool) {
+		t := strings.TrimSpace(s)
+		return t, t != ""
+	})
+	es, err := es8.NewClient(es8.Config{Addresses: addrs, Username: cfg.ES.Username, Password: cfg.ES.Password})
 	if err != nil {
 		return nil, func() {}, err
 	}
 	return es, func() {}, nil
 }
 
+// PostDoc represents a post document for Elasticsearch indexing
 type PostDoc struct {
 	ID        int    `json:"id"`
 	Title     string `json:"title"`
@@ -41,7 +46,8 @@ type PostDoc struct {
 	CreatedAt string `json:"created_at"`
 }
 
-func IndexPost(ctx context.Context, es *Client, index string, doc PostDoc) error {
+// IndexPost indexes a post document into Elasticsearch
+func IndexPost(_ context.Context, es *Client, index string, doc PostDoc) error {
 	if es == nil {
 		return nil
 	}
@@ -50,14 +56,17 @@ func IndexPost(ctx context.Context, es *Client, index string, doc PostDoc) error
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 	if res.StatusCode >= http.StatusBadRequest {
 		return fmtError(res)
 	}
 	return nil
 }
 
-func SearchPosts(ctx context.Context, es *Client, index string, query string, from, size int) (map[string]any, error) {
+// SearchPosts searches for posts in Elasticsearch index
+func SearchPosts(_ context.Context, es *Client, index string, query string, from, size int) (map[string]any, error) {
 	if es == nil {
 		return map[string]any{"hits": []any{}}, nil
 	}
@@ -67,7 +76,9 @@ func SearchPosts(ctx context.Context, es *Client, index string, query string, fr
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 	if res.StatusCode >= http.StatusBadRequest {
 		return nil, fmtError(res)
 	}
@@ -77,5 +88,5 @@ func SearchPosts(ctx context.Context, es *Client, index string, query string, fr
 }
 
 // helpers
-func strconvItoa(i int) string         { return strconv.Itoa(i) }
+func strconvItoa(i int) string           { return strconv.Itoa(i) }
 func fmtError(res *esapi.Response) error { return fmt.Errorf("es error: %s", res.String()) }

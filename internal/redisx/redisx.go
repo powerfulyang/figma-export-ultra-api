@@ -1,3 +1,4 @@
+// Package redisx provides Redis client functionality
 package redisx
 
 import (
@@ -5,11 +6,14 @@ import (
 	"time"
 
 	"fiber-ent-apollo-pg/internal/config"
+
 	"github.com/redis/go-redis/v9"
 )
 
+// Client is an alias for Redis client
 type Client = redis.Client
 
+// Open creates a new Redis client based on configuration
 func Open(cfg *config.Config) (*Client, func(), error) {
 	if cfg.Redis.Addr == "" {
 		return nil, func() {}, nil

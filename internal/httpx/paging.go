@@ -8,14 +8,16 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-    "github.com/samber/lo"
+	"github.com/samber/lo"
 )
 
+// CursorPayload represents cursor data for pagination
 type CursorPayload struct {
 	ID int       `json:"id"`
 	TS time.Time `json:"ts"`
 }
 
+// PagingParams contains pagination parameters from HTTP request
 type PagingParams struct {
 	Limit  int
 	Offset int
@@ -33,7 +35,7 @@ type PagingParams struct {
 }
 
 func parsePaging(c *fiber.Ctx) (PagingParams, error) {
-    p := PagingParams{Limit: lo.Clamp(c.QueryInt("limit", 20), 1, 100)}
+	p := PagingParams{Limit: lo.Clamp(c.QueryInt("limit", 20), 1, 100)}
 	p.Offset = c.QueryInt("offset", 0)
 	rawCursor := c.Query("cursor", "")
 	p.Sort = c.Query("sort", "")
@@ -98,7 +100,7 @@ func decodeCursor(s string) (CursorPayload, error) {
 	// Try base64 binary format
 	if b, err := base64.RawURLEncoding.DecodeString(s); err == nil && len(b) > 0 {
 		if b[0] == 1 {
-			var off int = 1
+			off := 1
 			id, n := binary.Uvarint(b[off:])
 			if n <= 0 {
 				return out, fiber.NewError(fiber.StatusBadRequest, "invalid cursor id")

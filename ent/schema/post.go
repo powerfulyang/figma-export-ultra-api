@@ -1,3 +1,4 @@
+// Package schema contains ent entity schema definitions
 package schema
 
 import (

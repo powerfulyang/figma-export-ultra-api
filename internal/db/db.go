@@ -1,3 +1,4 @@
+// Package db provides database connection and client functionality
 package db
 
 import (
@@ -6,7 +7,7 @@ import (
 
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
-	_ "github.com/jackc/pgx/v5/stdlib"
+	_ "github.com/jackc/pgx/v5/stdlib" // register pgx driver for PostgreSQL
 
 	"fiber-ent-apollo-pg/ent"
 	"fiber-ent-apollo-pg/internal/config"

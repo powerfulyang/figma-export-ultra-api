@@ -1,3 +1,4 @@
+// Package logx provides structured logging functionality
 package logx
 
 import (
@@ -19,6 +20,7 @@ func Init(level, format string) {
 	}
 }
 
+// L returns the global logger instance
 func L() *slog.Logger { return logger }
 
 func parseLevel(s string) slog.Level {

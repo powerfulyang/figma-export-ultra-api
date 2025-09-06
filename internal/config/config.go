@@ -1,12 +1,14 @@
 package config
 
 import (
-    "log"
-    "os"
-    "strconv"
-    "github.com/samber/lo"
+	"log"
+	"os"
+	"strconv"
+
+	"github.com/samber/lo"
 )
 
+// Config holds the application configuration
 type Config struct {
 	AppEnv string
 	Server struct {
@@ -93,8 +95,8 @@ func Load() (*Config, *Store, func(), error) {
 }
 
 func getEnv(key, def string) string {
-    v := os.Getenv(key)
-    return lo.Ternary(v != "", v, def)
+	v := os.Getenv(key)
+	return lo.Ternary(v != "", v, def)
 }
 
 func getInt(key string, def int) int {

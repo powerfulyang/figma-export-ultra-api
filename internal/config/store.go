@@ -5,8 +5,10 @@ import (
 	"sync/atomic"
 )
 
+// Watcher is a function that gets called when configuration changes
 type Watcher func(newCfg *Config, changed map[string]bool)
 
+// Store provides thread-safe access to configuration with watchers and validators
 type Store struct {
 	v          atomic.Value // *Config
 	mu         sync.RWMutex
@@ -14,16 +16,19 @@ type Store struct {
 	validators []Validator
 }
 
+// NewStore creates a new configuration store
 func NewStore(cfg *Config) *Store {
 	s := &Store{}
 	s.v.Store(cfg)
 	return s
 }
 
+// Get returns the current configuration
 func (s *Store) Get() *Config {
 	return s.v.Load().(*Config)
 }
 
+// Update sets a new configuration and notifies all watchers
 func (s *Store) Update(newCfg *Config, changed map[string]bool) {
 	s.v.Store(newCfg)
 	s.mu.RLock()
@@ -34,6 +39,7 @@ func (s *Store) Update(newCfg *Config, changed map[string]bool) {
 	}
 }
 
+// Watch registers a watcher for configuration changes and returns an unwatch function
 func (s *Store) Watch(w Watcher) func() {
 	s.mu.Lock()
 	s.watchers = append(s.watchers, w)
@@ -49,6 +55,7 @@ func (s *Store) Watch(w Watcher) func() {
 	}
 }
 
+// Validator is a function that validates configuration changes
 type Validator func(newCfg *Config, changed map[string]bool) error
 
 // AddValidator registers a validator. If any validator returns error on update, the update will be discarded.

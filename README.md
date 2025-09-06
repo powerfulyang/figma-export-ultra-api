@@ -9,7 +9,7 @@
 ### 快速开始
 
 1) 准备环境
-- Go 1.21+
+- Go 1.25+
 - Docker（用于本地启动 Postgres）
 
 2) 启动 Postgres
