@@ -20,3 +20,9 @@ Thumbs.db
 coverage/
 dist/
 
+# Go coverage output files
+coverage.out
+
+# Keep ent generated code tracked (do not ignore)
+# (Intentionally no pattern like `ent/` here)
+
