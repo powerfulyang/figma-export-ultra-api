@@ -20,7 +20,8 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23.x'
+          go-version: '1.x'
+          check-latest: true
           cache: true
 
       - name: Go env
@@ -61,7 +62,8 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23.x'
+          go-version: '1.x'
+          check-latest: true
           cache: true
 
       - name: Enable Docker info
@@ -74,4 +76,3 @@ jobs:
 
       - name: Run integration tests (Testcontainers)
         run: make test-integration
-
