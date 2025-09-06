@@ -1,4 +1,4 @@
-version: 2
+version: "2"
 run:
   timeout: 5m
   tests: true
@@ -17,25 +17,4 @@ linters:
   disable:
     - lll
 
-linters-settings:
-  gocyclo:
-    min-complexity: 18
-  revive:
-    rules:
-      - name: indent-error-flow
-      - name: exported
-        severity: warning
-      - name: errorf
-      - name: unreachable-code
-  misspell:
-    locale: US
 
-issues:
-  exclude-rules:
-    # Exclude generated ent code from linting
-    - path: ^ent/
-    - path: _test\.go
-      linters:
-        - gocyclo
-        - gocritic
-        - revive

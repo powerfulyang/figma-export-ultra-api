@@ -56,7 +56,7 @@ func Load() (*Config, *Store, func(), error) {
 	cfg.Server.Addr = getEnv("SERVER_ADDR", ":8080")
 	cfg.Log.Level = getEnv("LOG_LEVEL", "info")
 	cfg.Log.Format = getEnv("LOG_FORMAT", "text")
-	cfg.PG.URL = getEnv("POSTGRES_URL", "postgres://postgres:postgres@localhost:5432/app?sslmode=disable")
+	cfg.PG.URL = getEnv("POSTGRES_URL", "")
 	cfg.PG.MaxOpenConns = getInt("PG_MAX_OPEN", 10)
 	cfg.PG.MaxIdleConns = getInt("PG_MAX_IDLE", 5)
 

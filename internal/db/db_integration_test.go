@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	tc "github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 
 	"fiber-ent-apollo-pg/internal/config"

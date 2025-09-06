@@ -1,0 +1,58 @@
+# Git相关文件
+.git
+.gitignore
+.github
+
+# Docker相关文件
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# 文档和README
+README.md
+*.md
+docs/
+
+# 开发工具配置
+.vscode/
+.idea/
+*.iml
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+*~
+
+# 测试文件和覆盖率报告
+*_test.go
+*.test
+*.out
+coverage.html
+coverage.out
+
+# 构建产物
+bin/
+*.exe
+
+# 环境配置文件（可能包含敏感信息）
+.env
+.env.local
+.env.*.local
+
+# 依赖目录（不需要，因为我们用go mod download）
+vendor/
+
+# IDE和编辑器文件
+*.sublime-*
+.vscode/settings.json

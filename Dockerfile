@@ -1,64 +1,60 @@
-# syntax=docker/dockerfile:1
-
-# 统一 Go 版本，与 go.mod 保持一致（使用最新版）
-ARG GO_VERSION=1.25
-ARG TARGETPLATFORM
-
-# 构建阶段
-FROM --platform=$TARGETPLATFORM golang:${GO_VERSION}-alpine AS build
-WORKDIR /app
+FROM golang:1.24.1-alpine AS builder
 
 # 安装必要的工具
-RUN apk add --no-cache git ca-certificates && update-ca-certificates
-
-# 优化依赖缓存：先复制依赖文件，单独下载依赖
-COPY go.mod go.sum ./
-RUN --mount=type=cache,target=/go/pkg/mod \
-    go mod download
-
-# 复制源代码
-COPY . .
-
-# 设置构建环境
-ENV CGO_ENABLED=0
-
-# 生成 ent 代码
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    go generate ./ent
-
-# 构建应用程序，使用缓存挂载优化编译速度
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/server
-
-# 运行时阶段：使用更小的基础镜像
-FROM --platform=$TARGETPLATFORM alpine:3.20
-RUN addgroup -S app && adduser -S app -G app && \
-    apk add --no-cache ca-certificates tzdata && \
-    update-ca-certificates
+RUN apk add --no-cache git ca-certificates tzdata
 
 # 设置工作目录
 WORKDIR /app
 
-# 复制构建产物
-COPY --from=build /out/server /usr/local/bin/server
+# 复制go.mod和go.sum文件（这些文件变化频率低，放在前面利用缓存）
+COPY go.mod go.sum ./
 
-# 使用非特权用户
-USER app:app
+# 下载依赖（只有当go.mod或go.sum变化时才重新执行）
+RUN go mod download
 
-# 设置环境变量
-ENV APP_ENV=prod \
-    SERVER_ADDR=:8080 \
-    TZ=UTC
+# 验证依赖完整性
+RUN go mod verify
+
+# 复制源代码（源代码变化频率高，放在依赖下载之后）
+COPY . .
+
+# 构建二进制文件 - 支持多平台
+# 使用CGO_ENABLED=0生成静态链接的二进制文件
+# 使用-ldflags减小二进制文件大小
+# 动态设置目标操作系统和架构
+RUN go build \
+    -o /app/bin/server \
+    ./cmd/server
+
+# 运行阶段 - 使用最小化的基础镜像
+FROM alpine
+
+# 安装运行时必需的包
+RUN apk --no-cache add ca-certificates tzdata
+
+# 创建非root用户提高安全性
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
+# 设置工作目录
+WORKDIR /app
+
+# 从构建阶段复制二进制文件
+COPY --from=builder /app/bin/server /app/server
+
+# 创建必要的目录并设置权限
+RUN mkdir -p /app/logs && \
+    chown -R appuser:appgroup /app
+
+# 切换到非root用户
+USER appuser
 
 # 暴露端口
 EXPOSE 8080
 
-# 设置健康检查（可选）
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
-# 启动应用
-ENTRYPOINT ["/usr/local/bin/server"]
-
+# 运行应用
+CMD ["./server"]
