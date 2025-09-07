@@ -1,10 +1,12 @@
+// Package schema provides database schema definitions for the figma export ultra API.
+// This package contains entity schemas including AnonymousUser, User, UserAuth,
+// UserConfig, ConfigHistory, and ExportRecord for managing user data and export operations.
 package schema
 
 import (
 	"time"
 
 	"entgo.io/ent"
-	"entgo.io/ent/dialect"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
@@ -41,34 +43,18 @@ func (UserAuth) Fields() []ent.Field {
 
 		field.JSON("provider_data", map[string]interface{}{}).
 			Optional().
-			SchemaType(map[string]string{
-				dialect.MySQL:    "json",
-				dialect.Postgres: "jsonb",
-			}).
 			Comment("第三方平台的完整用户信息"),
 
 		field.String("access_token").Optional().Comment("第三方平台的访问令牌"),
 		field.String("refresh_token").Optional().Comment("第三方平台的刷新令牌"),
-		field.Time("token_expires_at").Optional().SchemaType(map[string]string{
-			dialect.MySQL:    "timestamp",
-			dialect.Postgres: "timestamptz",
-		}).Comment("令牌过期时间"),
+		field.Time("token_expires_at").Optional().Comment("令牌过期时间"),
 
 		field.Bool("is_primary").Comment("是否为主要认证方式"),
 		field.Bool("is_enabled").Comment("是否启用"),
 
-		field.Time("last_used_at").Optional().SchemaType(map[string]string{
-			dialect.MySQL:    "timestamp",
-			dialect.Postgres: "timestamptz",
-		}).Comment("最后使用时间"),
-		field.Time("created_at").Immutable().SchemaType(map[string]string{
-			dialect.MySQL:    "timestamp DEFAULT CURRENT_TIMESTAMP",
-			dialect.Postgres: "timestamptz DEFAULT CURRENT_TIMESTAMP",
-		}),
-		field.Time("updated_at").UpdateDefault(time.Now).SchemaType(map[string]string{
-			dialect.MySQL:    "timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
-			dialect.Postgres: "timestamptz DEFAULT CURRENT_TIMESTAMP",
-		}),
+		field.Time("last_used_at").Optional().Comment("最后使用时间"),
+		field.Time("created_at").Immutable().Default(time.Now),
+		field.Time("updated_at").UpdateDefault(time.Now),
 	}
 }
 

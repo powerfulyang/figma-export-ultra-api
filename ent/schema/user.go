@@ -1,10 +1,12 @@
+// Package schema provides database schema definitions for the figma export ultra API.
+// This package contains entity schemas including AnonymousUser, User, UserAuth,
+// UserConfig, ConfigHistory, and ExportRecord for managing user data and export operations.
 package schema
 
 import (
 	"time"
 
 	"entgo.io/ent"
-	"entgo.io/ent/dialect"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -24,19 +26,10 @@ func (User) Fields() []ent.Field {
 		field.String("bio").Optional().Comment("个人简介"),
 		field.String("timezone").Optional().Comment("时区设置"),
 		field.String("language").Optional().Comment("语言偏好"),
-		field.Bool("is_active").Comment("账号是否激活"),
-		field.Time("last_login_at").Optional().SchemaType(map[string]string{
-			dialect.MySQL:    "timestamp",
-			dialect.Postgres: "timestamptz",
-		}).Comment("最后登录时间"),
-		field.Time("created_at").Immutable().SchemaType(map[string]string{
-			dialect.MySQL:    "timestamp DEFAULT CURRENT_TIMESTAMP",
-			dialect.Postgres: "timestamptz DEFAULT CURRENT_TIMESTAMP",
-		}),
-		field.Time("updated_at").UpdateDefault(time.Now).SchemaType(map[string]string{
-			dialect.MySQL:    "timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
-			dialect.Postgres: "timestamptz DEFAULT CURRENT_TIMESTAMP",
-		}),
+		field.Bool("is_active").Default(true).Comment("账号是否激活"),
+		field.Time("last_login_at").Optional().Comment("最后登录时间"),
+		field.Time("created_at").Immutable().Default(time.Now),
+		field.Time("updated_at").UpdateDefault(time.Now),
 	}
 }
 

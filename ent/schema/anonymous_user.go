@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"entgo.io/ent"
-	"entgo.io/ent/dialect"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -26,19 +25,10 @@ func (AnonymousUser) Fields() []ent.Field {
 		field.String("timezone").Optional().Comment("时区信息"),
 		field.String("language").Optional().Comment("语言设置"),
 		field.String("screen_resolution").Optional().Comment("屏幕分辨率"),
-		field.Bool("is_active").Comment("是否活跃"),
-		field.Time("last_activity_at").SchemaType(map[string]string{
-			dialect.MySQL:    "timestamp DEFAULT CURRENT_TIMESTAMP",
-			dialect.Postgres: "timestamptz DEFAULT CURRENT_TIMESTAMP",
-		}).Comment("最后活动时间"),
-		field.Time("created_at").Immutable().SchemaType(map[string]string{
-			dialect.MySQL:    "timestamp DEFAULT CURRENT_TIMESTAMP",
-			dialect.Postgres: "timestamptz DEFAULT CURRENT_TIMESTAMP",
-		}),
-		field.Time("updated_at").UpdateDefault(time.Now).SchemaType(map[string]string{
-			dialect.MySQL:    "timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
-			dialect.Postgres: "timestamptz DEFAULT CURRENT_TIMESTAMP",
-		}),
+		field.Bool("is_active").Default(true).Comment("是否活跃"),
+		field.Time("last_activity_at").Default(time.Now()).Comment("最后活动时间"),
+		field.Time("created_at").Immutable().Default(time.Now),
+		field.Time("updated_at").UpdateDefault(time.Now),
 	}
 }
 
