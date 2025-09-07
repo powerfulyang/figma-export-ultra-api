@@ -12,10 +12,18 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
-	// Post is the client for interacting with the Post builders.
-	Post *PostClient
+	// AnonymousUser is the client for interacting with the AnonymousUser builders.
+	AnonymousUser *AnonymousUserClient
+	// ConfigHistory is the client for interacting with the ConfigHistory builders.
+	ConfigHistory *ConfigHistoryClient
+	// ExportRecord is the client for interacting with the ExportRecord builders.
+	ExportRecord *ExportRecordClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
+	// UserAuth is the client for interacting with the UserAuth builders.
+	UserAuth *UserAuthClient
+	// UserConfig is the client for interacting with the UserConfig builders.
+	UserConfig *UserConfigClient
 
 	// lazily loaded.
 	client     *Client
@@ -147,8 +155,12 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
-	tx.Post = NewPostClient(tx.config)
+	tx.AnonymousUser = NewAnonymousUserClient(tx.config)
+	tx.ConfigHistory = NewConfigHistoryClient(tx.config)
+	tx.ExportRecord = NewExportRecordClient(tx.config)
 	tx.User = NewUserClient(tx.config)
+	tx.UserAuth = NewUserAuthClient(tx.config)
+	tx.UserConfig = NewUserConfigClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.
@@ -158,7 +170,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: Post.QueryXXX(), the query will be executed
+// applies a query, for example: AnonymousUser.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

@@ -5,8 +5,12 @@ package ent
 import (
 	"context"
 	"errors"
-	"fiber-ent-apollo-pg/ent/post"
+	"fiber-ent-apollo-pg/ent/anonymoususer"
+	"fiber-ent-apollo-pg/ent/confighistory"
+	"fiber-ent-apollo-pg/ent/exportrecord"
 	"fiber-ent-apollo-pg/ent/user"
+	"fiber-ent-apollo-pg/ent/userauth"
+	"fiber-ent-apollo-pg/ent/userconfig"
 	"fmt"
 	"reflect"
 	"sync"
@@ -74,8 +78,12 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			post.Table: post.ValidColumn,
-			user.Table: user.ValidColumn,
+			anonymoususer.Table: anonymoususer.ValidColumn,
+			confighistory.Table: confighistory.ValidColumn,
+			exportrecord.Table:  exportrecord.ValidColumn,
+			user.Table:          user.ValidColumn,
+			userauth.Table:      userauth.ValidColumn,
+			userconfig.Table:    userconfig.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

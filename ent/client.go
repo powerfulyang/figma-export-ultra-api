@@ -11,13 +11,18 @@ import (
 
 	"fiber-ent-apollo-pg/ent/migrate"
 
-	"fiber-ent-apollo-pg/ent/post"
+	"fiber-ent-apollo-pg/ent/anonymoususer"
+	"fiber-ent-apollo-pg/ent/confighistory"
+	"fiber-ent-apollo-pg/ent/exportrecord"
 	"fiber-ent-apollo-pg/ent/user"
+	"fiber-ent-apollo-pg/ent/userauth"
+	"fiber-ent-apollo-pg/ent/userconfig"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/google/uuid"
 )
 
 // Client is the client that holds all ent builders.
@@ -25,10 +30,18 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
-	// Post is the client for interacting with the Post builders.
-	Post *PostClient
+	// AnonymousUser is the client for interacting with the AnonymousUser builders.
+	AnonymousUser *AnonymousUserClient
+	// ConfigHistory is the client for interacting with the ConfigHistory builders.
+	ConfigHistory *ConfigHistoryClient
+	// ExportRecord is the client for interacting with the ExportRecord builders.
+	ExportRecord *ExportRecordClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
+	// UserAuth is the client for interacting with the UserAuth builders.
+	UserAuth *UserAuthClient
+	// UserConfig is the client for interacting with the UserConfig builders.
+	UserConfig *UserConfigClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -40,8 +53,12 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
-	c.Post = NewPostClient(c.config)
+	c.AnonymousUser = NewAnonymousUserClient(c.config)
+	c.ConfigHistory = NewConfigHistoryClient(c.config)
+	c.ExportRecord = NewExportRecordClient(c.config)
 	c.User = NewUserClient(c.config)
+	c.UserAuth = NewUserAuthClient(c.config)
+	c.UserConfig = NewUserConfigClient(c.config)
 }
 
 type (
@@ -132,10 +149,14 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:    ctx,
-		config: cfg,
-		Post:   NewPostClient(cfg),
-		User:   NewUserClient(cfg),
+		ctx:           ctx,
+		config:        cfg,
+		AnonymousUser: NewAnonymousUserClient(cfg),
+		ConfigHistory: NewConfigHistoryClient(cfg),
+		ExportRecord:  NewExportRecordClient(cfg),
+		User:          NewUserClient(cfg),
+		UserAuth:      NewUserAuthClient(cfg),
+		UserConfig:    NewUserConfigClient(cfg),
 	}, nil
 }
 
@@ -153,17 +174,21 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:    ctx,
-		config: cfg,
-		Post:   NewPostClient(cfg),
-		User:   NewUserClient(cfg),
+		ctx:           ctx,
+		config:        cfg,
+		AnonymousUser: NewAnonymousUserClient(cfg),
+		ConfigHistory: NewConfigHistoryClient(cfg),
+		ExportRecord:  NewExportRecordClient(cfg),
+		User:          NewUserClient(cfg),
+		UserAuth:      NewUserAuthClient(cfg),
+		UserConfig:    NewUserConfigClient(cfg),
 	}, nil
 }
 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		Post.
+//		AnonymousUser.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -185,130 +210,146 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
-	c.Post.Use(hooks...)
-	c.User.Use(hooks...)
+	for _, n := range []interface{ Use(...Hook) }{
+		c.AnonymousUser, c.ConfigHistory, c.ExportRecord, c.User, c.UserAuth,
+		c.UserConfig,
+	} {
+		n.Use(hooks...)
+	}
 }
 
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
-	c.Post.Intercept(interceptors...)
-	c.User.Intercept(interceptors...)
+	for _, n := range []interface{ Intercept(...Interceptor) }{
+		c.AnonymousUser, c.ConfigHistory, c.ExportRecord, c.User, c.UserAuth,
+		c.UserConfig,
+	} {
+		n.Intercept(interceptors...)
+	}
 }
 
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
-	case *PostMutation:
-		return c.Post.mutate(ctx, m)
+	case *AnonymousUserMutation:
+		return c.AnonymousUser.mutate(ctx, m)
+	case *ConfigHistoryMutation:
+		return c.ConfigHistory.mutate(ctx, m)
+	case *ExportRecordMutation:
+		return c.ExportRecord.mutate(ctx, m)
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
+	case *UserAuthMutation:
+		return c.UserAuth.mutate(ctx, m)
+	case *UserConfigMutation:
+		return c.UserConfig.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
 	}
 }
 
-// PostClient is a client for the Post schema.
-type PostClient struct {
+// AnonymousUserClient is a client for the AnonymousUser schema.
+type AnonymousUserClient struct {
 	config
 }
 
-// NewPostClient returns a client for the Post from the given config.
-func NewPostClient(c config) *PostClient {
-	return &PostClient{config: c}
+// NewAnonymousUserClient returns a client for the AnonymousUser from the given config.
+func NewAnonymousUserClient(c config) *AnonymousUserClient {
+	return &AnonymousUserClient{config: c}
 }
 
 // Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `post.Hooks(f(g(h())))`.
-func (c *PostClient) Use(hooks ...Hook) {
-	c.hooks.Post = append(c.hooks.Post, hooks...)
+// A call to `Use(f, g, h)` equals to `anonymoususer.Hooks(f(g(h())))`.
+func (c *AnonymousUserClient) Use(hooks ...Hook) {
+	c.hooks.AnonymousUser = append(c.hooks.AnonymousUser, hooks...)
 }
 
 // Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `post.Intercept(f(g(h())))`.
-func (c *PostClient) Intercept(interceptors ...Interceptor) {
-	c.inters.Post = append(c.inters.Post, interceptors...)
+// A call to `Intercept(f, g, h)` equals to `anonymoususer.Intercept(f(g(h())))`.
+func (c *AnonymousUserClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AnonymousUser = append(c.inters.AnonymousUser, interceptors...)
 }
 
-// Create returns a builder for creating a Post entity.
-func (c *PostClient) Create() *PostCreate {
-	mutation := newPostMutation(c.config, OpCreate)
-	return &PostCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Create returns a builder for creating a AnonymousUser entity.
+func (c *AnonymousUserClient) Create() *AnonymousUserCreate {
+	mutation := newAnonymousUserMutation(c.config, OpCreate)
+	return &AnonymousUserCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// CreateBulk returns a builder for creating a bulk of Post entities.
-func (c *PostClient) CreateBulk(builders ...*PostCreate) *PostCreateBulk {
-	return &PostCreateBulk{config: c.config, builders: builders}
+// CreateBulk returns a builder for creating a bulk of AnonymousUser entities.
+func (c *AnonymousUserClient) CreateBulk(builders ...*AnonymousUserCreate) *AnonymousUserCreateBulk {
+	return &AnonymousUserCreateBulk{config: c.config, builders: builders}
 }
 
 // MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
 // a builder and applies setFunc on it.
-func (c *PostClient) MapCreateBulk(slice any, setFunc func(*PostCreate, int)) *PostCreateBulk {
+func (c *AnonymousUserClient) MapCreateBulk(slice any, setFunc func(*AnonymousUserCreate, int)) *AnonymousUserCreateBulk {
 	rv := reflect.ValueOf(slice)
 	if rv.Kind() != reflect.Slice {
-		return &PostCreateBulk{err: fmt.Errorf("calling to PostClient.MapCreateBulk with wrong type %T, need slice", slice)}
+		return &AnonymousUserCreateBulk{err: fmt.Errorf("calling to AnonymousUserClient.MapCreateBulk with wrong type %T, need slice", slice)}
 	}
-	builders := make([]*PostCreate, rv.Len())
+	builders := make([]*AnonymousUserCreate, rv.Len())
 	for i := 0; i < rv.Len(); i++ {
 		builders[i] = c.Create()
 		setFunc(builders[i], i)
 	}
-	return &PostCreateBulk{config: c.config, builders: builders}
+	return &AnonymousUserCreateBulk{config: c.config, builders: builders}
 }
 
-// Update returns an update builder for Post.
-func (c *PostClient) Update() *PostUpdate {
-	mutation := newPostMutation(c.config, OpUpdate)
-	return &PostUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Update returns an update builder for AnonymousUser.
+func (c *AnonymousUserClient) Update() *AnonymousUserUpdate {
+	mutation := newAnonymousUserMutation(c.config, OpUpdate)
+	return &AnonymousUserUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOne returns an update builder for the given entity.
-func (c *PostClient) UpdateOne(_m *Post) *PostUpdateOne {
-	mutation := newPostMutation(c.config, OpUpdateOne, withPost(_m))
-	return &PostUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *AnonymousUserClient) UpdateOne(_m *AnonymousUser) *AnonymousUserUpdateOne {
+	mutation := newAnonymousUserMutation(c.config, OpUpdateOne, withAnonymousUser(_m))
+	return &AnonymousUserUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *PostClient) UpdateOneID(id int) *PostUpdateOne {
-	mutation := newPostMutation(c.config, OpUpdateOne, withPostID(id))
-	return &PostUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *AnonymousUserClient) UpdateOneID(id uuid.UUID) *AnonymousUserUpdateOne {
+	mutation := newAnonymousUserMutation(c.config, OpUpdateOne, withAnonymousUserID(id))
+	return &AnonymousUserUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// Delete returns a delete builder for Post.
-func (c *PostClient) Delete() *PostDelete {
-	mutation := newPostMutation(c.config, OpDelete)
-	return &PostDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Delete returns a delete builder for AnonymousUser.
+func (c *AnonymousUserClient) Delete() *AnonymousUserDelete {
+	mutation := newAnonymousUserMutation(c.config, OpDelete)
+	return &AnonymousUserDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // DeleteOne returns a builder for deleting the given entity.
-func (c *PostClient) DeleteOne(_m *Post) *PostDeleteOne {
+func (c *AnonymousUserClient) DeleteOne(_m *AnonymousUser) *AnonymousUserDeleteOne {
 	return c.DeleteOneID(_m.ID)
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *PostClient) DeleteOneID(id int) *PostDeleteOne {
-	builder := c.Delete().Where(post.ID(id))
+func (c *AnonymousUserClient) DeleteOneID(id uuid.UUID) *AnonymousUserDeleteOne {
+	builder := c.Delete().Where(anonymoususer.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
-	return &PostDeleteOne{builder}
+	return &AnonymousUserDeleteOne{builder}
 }
 
-// Query returns a query builder for Post.
-func (c *PostClient) Query() *PostQuery {
-	return &PostQuery{
+// Query returns a query builder for AnonymousUser.
+func (c *AnonymousUserClient) Query() *AnonymousUserQuery {
+	return &AnonymousUserQuery{
 		config: c.config,
-		ctx:    &QueryContext{Type: TypePost},
+		ctx:    &QueryContext{Type: TypeAnonymousUser},
 		inters: c.Interceptors(),
 	}
 }
 
-// Get returns a Post entity by its id.
-func (c *PostClient) Get(ctx context.Context, id int) (*Post, error) {
-	return c.Query().Where(post.ID(id)).Only(ctx)
+// Get returns a AnonymousUser entity by its id.
+func (c *AnonymousUserClient) Get(ctx context.Context, id uuid.UUID) (*AnonymousUser, error) {
+	return c.Query().Where(anonymoususer.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *PostClient) GetX(ctx context.Context, id int) *Post {
+func (c *AnonymousUserClient) GetX(ctx context.Context, id uuid.UUID) *AnonymousUser {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -316,15 +357,31 @@ func (c *PostClient) GetX(ctx context.Context, id int) *Post {
 	return obj
 }
 
-// QueryAuthor queries the author edge of a Post.
-func (c *PostClient) QueryAuthor(_m *Post) *UserQuery {
-	query := (&UserClient{config: c.config}).Query()
+// QueryConfigs queries the configs edge of a AnonymousUser.
+func (c *AnonymousUserClient) QueryConfigs(_m *AnonymousUser) *UserConfigQuery {
+	query := (&UserConfigClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
-			sqlgraph.From(post.Table, post.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, post.AuthorTable, post.AuthorColumn),
+			sqlgraph.From(anonymoususer.Table, anonymoususer.FieldID, id),
+			sqlgraph.To(userconfig.Table, userconfig.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, anonymoususer.ConfigsTable, anonymoususer.ConfigsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryExportRecords queries the export_records edge of a AnonymousUser.
+func (c *AnonymousUserClient) QueryExportRecords(_m *AnonymousUser) *ExportRecordQuery {
+	query := (&ExportRecordClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(anonymoususer.Table, anonymoususer.FieldID, id),
+			sqlgraph.To(exportrecord.Table, exportrecord.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, anonymoususer.ExportRecordsTable, anonymoususer.ExportRecordsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -333,27 +390,341 @@ func (c *PostClient) QueryAuthor(_m *Post) *UserQuery {
 }
 
 // Hooks returns the client hooks.
-func (c *PostClient) Hooks() []Hook {
-	return c.hooks.Post
+func (c *AnonymousUserClient) Hooks() []Hook {
+	return c.hooks.AnonymousUser
 }
 
 // Interceptors returns the client interceptors.
-func (c *PostClient) Interceptors() []Interceptor {
-	return c.inters.Post
+func (c *AnonymousUserClient) Interceptors() []Interceptor {
+	return c.inters.AnonymousUser
 }
 
-func (c *PostClient) mutate(ctx context.Context, m *PostMutation) (Value, error) {
+func (c *AnonymousUserClient) mutate(ctx context.Context, m *AnonymousUserMutation) (Value, error) {
 	switch m.Op() {
 	case OpCreate:
-		return (&PostCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&AnonymousUserCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpUpdate:
-		return (&PostUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&AnonymousUserUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpUpdateOne:
-		return (&PostUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&AnonymousUserUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpDelete, OpDeleteOne:
-		return (&PostDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+		return (&AnonymousUserDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
-		return nil, fmt.Errorf("ent: unknown Post mutation op: %q", m.Op())
+		return nil, fmt.Errorf("ent: unknown AnonymousUser mutation op: %q", m.Op())
+	}
+}
+
+// ConfigHistoryClient is a client for the ConfigHistory schema.
+type ConfigHistoryClient struct {
+	config
+}
+
+// NewConfigHistoryClient returns a client for the ConfigHistory from the given config.
+func NewConfigHistoryClient(c config) *ConfigHistoryClient {
+	return &ConfigHistoryClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `confighistory.Hooks(f(g(h())))`.
+func (c *ConfigHistoryClient) Use(hooks ...Hook) {
+	c.hooks.ConfigHistory = append(c.hooks.ConfigHistory, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `confighistory.Intercept(f(g(h())))`.
+func (c *ConfigHistoryClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ConfigHistory = append(c.inters.ConfigHistory, interceptors...)
+}
+
+// Create returns a builder for creating a ConfigHistory entity.
+func (c *ConfigHistoryClient) Create() *ConfigHistoryCreate {
+	mutation := newConfigHistoryMutation(c.config, OpCreate)
+	return &ConfigHistoryCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ConfigHistory entities.
+func (c *ConfigHistoryClient) CreateBulk(builders ...*ConfigHistoryCreate) *ConfigHistoryCreateBulk {
+	return &ConfigHistoryCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ConfigHistoryClient) MapCreateBulk(slice any, setFunc func(*ConfigHistoryCreate, int)) *ConfigHistoryCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ConfigHistoryCreateBulk{err: fmt.Errorf("calling to ConfigHistoryClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ConfigHistoryCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ConfigHistoryCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ConfigHistory.
+func (c *ConfigHistoryClient) Update() *ConfigHistoryUpdate {
+	mutation := newConfigHistoryMutation(c.config, OpUpdate)
+	return &ConfigHistoryUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ConfigHistoryClient) UpdateOne(_m *ConfigHistory) *ConfigHistoryUpdateOne {
+	mutation := newConfigHistoryMutation(c.config, OpUpdateOne, withConfigHistory(_m))
+	return &ConfigHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ConfigHistoryClient) UpdateOneID(id uuid.UUID) *ConfigHistoryUpdateOne {
+	mutation := newConfigHistoryMutation(c.config, OpUpdateOne, withConfigHistoryID(id))
+	return &ConfigHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ConfigHistory.
+func (c *ConfigHistoryClient) Delete() *ConfigHistoryDelete {
+	mutation := newConfigHistoryMutation(c.config, OpDelete)
+	return &ConfigHistoryDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ConfigHistoryClient) DeleteOne(_m *ConfigHistory) *ConfigHistoryDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ConfigHistoryClient) DeleteOneID(id uuid.UUID) *ConfigHistoryDeleteOne {
+	builder := c.Delete().Where(confighistory.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ConfigHistoryDeleteOne{builder}
+}
+
+// Query returns a query builder for ConfigHistory.
+func (c *ConfigHistoryClient) Query() *ConfigHistoryQuery {
+	return &ConfigHistoryQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeConfigHistory},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ConfigHistory entity by its id.
+func (c *ConfigHistoryClient) Get(ctx context.Context, id uuid.UUID) (*ConfigHistory, error) {
+	return c.Query().Where(confighistory.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ConfigHistoryClient) GetX(ctx context.Context, id uuid.UUID) *ConfigHistory {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryConfig queries the config edge of a ConfigHistory.
+func (c *ConfigHistoryClient) QueryConfig(_m *ConfigHistory) *UserConfigQuery {
+	query := (&UserConfigClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(confighistory.Table, confighistory.FieldID, id),
+			sqlgraph.To(userconfig.Table, userconfig.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, confighistory.ConfigTable, confighistory.ConfigColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ConfigHistoryClient) Hooks() []Hook {
+	return c.hooks.ConfigHistory
+}
+
+// Interceptors returns the client interceptors.
+func (c *ConfigHistoryClient) Interceptors() []Interceptor {
+	return c.inters.ConfigHistory
+}
+
+func (c *ConfigHistoryClient) mutate(ctx context.Context, m *ConfigHistoryMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ConfigHistoryCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ConfigHistoryUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ConfigHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ConfigHistoryDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ConfigHistory mutation op: %q", m.Op())
+	}
+}
+
+// ExportRecordClient is a client for the ExportRecord schema.
+type ExportRecordClient struct {
+	config
+}
+
+// NewExportRecordClient returns a client for the ExportRecord from the given config.
+func NewExportRecordClient(c config) *ExportRecordClient {
+	return &ExportRecordClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `exportrecord.Hooks(f(g(h())))`.
+func (c *ExportRecordClient) Use(hooks ...Hook) {
+	c.hooks.ExportRecord = append(c.hooks.ExportRecord, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `exportrecord.Intercept(f(g(h())))`.
+func (c *ExportRecordClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ExportRecord = append(c.inters.ExportRecord, interceptors...)
+}
+
+// Create returns a builder for creating a ExportRecord entity.
+func (c *ExportRecordClient) Create() *ExportRecordCreate {
+	mutation := newExportRecordMutation(c.config, OpCreate)
+	return &ExportRecordCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ExportRecord entities.
+func (c *ExportRecordClient) CreateBulk(builders ...*ExportRecordCreate) *ExportRecordCreateBulk {
+	return &ExportRecordCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ExportRecordClient) MapCreateBulk(slice any, setFunc func(*ExportRecordCreate, int)) *ExportRecordCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ExportRecordCreateBulk{err: fmt.Errorf("calling to ExportRecordClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ExportRecordCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ExportRecordCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ExportRecord.
+func (c *ExportRecordClient) Update() *ExportRecordUpdate {
+	mutation := newExportRecordMutation(c.config, OpUpdate)
+	return &ExportRecordUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ExportRecordClient) UpdateOne(_m *ExportRecord) *ExportRecordUpdateOne {
+	mutation := newExportRecordMutation(c.config, OpUpdateOne, withExportRecord(_m))
+	return &ExportRecordUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ExportRecordClient) UpdateOneID(id uuid.UUID) *ExportRecordUpdateOne {
+	mutation := newExportRecordMutation(c.config, OpUpdateOne, withExportRecordID(id))
+	return &ExportRecordUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ExportRecord.
+func (c *ExportRecordClient) Delete() *ExportRecordDelete {
+	mutation := newExportRecordMutation(c.config, OpDelete)
+	return &ExportRecordDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ExportRecordClient) DeleteOne(_m *ExportRecord) *ExportRecordDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ExportRecordClient) DeleteOneID(id uuid.UUID) *ExportRecordDeleteOne {
+	builder := c.Delete().Where(exportrecord.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ExportRecordDeleteOne{builder}
+}
+
+// Query returns a query builder for ExportRecord.
+func (c *ExportRecordClient) Query() *ExportRecordQuery {
+	return &ExportRecordQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeExportRecord},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ExportRecord entity by its id.
+func (c *ExportRecordClient) Get(ctx context.Context, id uuid.UUID) (*ExportRecord, error) {
+	return c.Query().Where(exportrecord.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ExportRecordClient) GetX(ctx context.Context, id uuid.UUID) *ExportRecord {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryUser queries the user edge of a ExportRecord.
+func (c *ExportRecordClient) QueryUser(_m *ExportRecord) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(exportrecord.Table, exportrecord.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, exportrecord.UserTable, exportrecord.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAnonymousUser queries the anonymous_user edge of a ExportRecord.
+func (c *ExportRecordClient) QueryAnonymousUser(_m *ExportRecord) *AnonymousUserQuery {
+	query := (&AnonymousUserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(exportrecord.Table, exportrecord.FieldID, id),
+			sqlgraph.To(anonymoususer.Table, anonymoususer.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, exportrecord.AnonymousUserTable, exportrecord.AnonymousUserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ExportRecordClient) Hooks() []Hook {
+	return c.hooks.ExportRecord
+}
+
+// Interceptors returns the client interceptors.
+func (c *ExportRecordClient) Interceptors() []Interceptor {
+	return c.inters.ExportRecord
+}
+
+func (c *ExportRecordClient) mutate(ctx context.Context, m *ExportRecordMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ExportRecordCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ExportRecordUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ExportRecordUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ExportRecordDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ExportRecord mutation op: %q", m.Op())
 	}
 }
 
@@ -418,7 +789,7 @@ func (c *UserClient) UpdateOne(_m *User) *UserUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *UserClient) UpdateOneID(id int) *UserUpdateOne {
+func (c *UserClient) UpdateOneID(id uuid.UUID) *UserUpdateOne {
 	mutation := newUserMutation(c.config, OpUpdateOne, withUserID(id))
 	return &UserUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -435,7 +806,7 @@ func (c *UserClient) DeleteOne(_m *User) *UserDeleteOne {
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *UserClient) DeleteOneID(id int) *UserDeleteOne {
+func (c *UserClient) DeleteOneID(id uuid.UUID) *UserDeleteOne {
 	builder := c.Delete().Where(user.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -452,12 +823,12 @@ func (c *UserClient) Query() *UserQuery {
 }
 
 // Get returns a User entity by its id.
-func (c *UserClient) Get(ctx context.Context, id int) (*User, error) {
+func (c *UserClient) Get(ctx context.Context, id uuid.UUID) (*User, error) {
 	return c.Query().Where(user.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *UserClient) GetX(ctx context.Context, id int) *User {
+func (c *UserClient) GetX(ctx context.Context, id uuid.UUID) *User {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -465,15 +836,47 @@ func (c *UserClient) GetX(ctx context.Context, id int) *User {
 	return obj
 }
 
-// QueryPosts queries the posts edge of a User.
-func (c *UserClient) QueryPosts(_m *User) *PostQuery {
-	query := (&PostClient{config: c.config}).Query()
+// QueryAuthMethods queries the auth_methods edge of a User.
+func (c *UserClient) QueryAuthMethods(_m *User) *UserAuthQuery {
+	query := (&UserAuthClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(post.Table, post.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.PostsTable, user.PostsColumn),
+			sqlgraph.To(userauth.Table, userauth.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.AuthMethodsTable, user.AuthMethodsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryConfigs queries the configs edge of a User.
+func (c *UserClient) QueryConfigs(_m *User) *UserConfigQuery {
+	query := (&UserConfigClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(userconfig.Table, userconfig.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ConfigsTable, user.ConfigsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryExportRecords queries the export_records edge of a User.
+func (c *UserClient) QueryExportRecords(_m *User) *ExportRecordQuery {
+	query := (&ExportRecordClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(exportrecord.Table, exportrecord.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ExportRecordsTable, user.ExportRecordsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -506,12 +909,344 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 	}
 }
 
+// UserAuthClient is a client for the UserAuth schema.
+type UserAuthClient struct {
+	config
+}
+
+// NewUserAuthClient returns a client for the UserAuth from the given config.
+func NewUserAuthClient(c config) *UserAuthClient {
+	return &UserAuthClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `userauth.Hooks(f(g(h())))`.
+func (c *UserAuthClient) Use(hooks ...Hook) {
+	c.hooks.UserAuth = append(c.hooks.UserAuth, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `userauth.Intercept(f(g(h())))`.
+func (c *UserAuthClient) Intercept(interceptors ...Interceptor) {
+	c.inters.UserAuth = append(c.inters.UserAuth, interceptors...)
+}
+
+// Create returns a builder for creating a UserAuth entity.
+func (c *UserAuthClient) Create() *UserAuthCreate {
+	mutation := newUserAuthMutation(c.config, OpCreate)
+	return &UserAuthCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of UserAuth entities.
+func (c *UserAuthClient) CreateBulk(builders ...*UserAuthCreate) *UserAuthCreateBulk {
+	return &UserAuthCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *UserAuthClient) MapCreateBulk(slice any, setFunc func(*UserAuthCreate, int)) *UserAuthCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &UserAuthCreateBulk{err: fmt.Errorf("calling to UserAuthClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*UserAuthCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &UserAuthCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for UserAuth.
+func (c *UserAuthClient) Update() *UserAuthUpdate {
+	mutation := newUserAuthMutation(c.config, OpUpdate)
+	return &UserAuthUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *UserAuthClient) UpdateOne(_m *UserAuth) *UserAuthUpdateOne {
+	mutation := newUserAuthMutation(c.config, OpUpdateOne, withUserAuth(_m))
+	return &UserAuthUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *UserAuthClient) UpdateOneID(id uuid.UUID) *UserAuthUpdateOne {
+	mutation := newUserAuthMutation(c.config, OpUpdateOne, withUserAuthID(id))
+	return &UserAuthUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for UserAuth.
+func (c *UserAuthClient) Delete() *UserAuthDelete {
+	mutation := newUserAuthMutation(c.config, OpDelete)
+	return &UserAuthDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *UserAuthClient) DeleteOne(_m *UserAuth) *UserAuthDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *UserAuthClient) DeleteOneID(id uuid.UUID) *UserAuthDeleteOne {
+	builder := c.Delete().Where(userauth.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &UserAuthDeleteOne{builder}
+}
+
+// Query returns a query builder for UserAuth.
+func (c *UserAuthClient) Query() *UserAuthQuery {
+	return &UserAuthQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeUserAuth},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a UserAuth entity by its id.
+func (c *UserAuthClient) Get(ctx context.Context, id uuid.UUID) (*UserAuth, error) {
+	return c.Query().Where(userauth.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *UserAuthClient) GetX(ctx context.Context, id uuid.UUID) *UserAuth {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryUser queries the user edge of a UserAuth.
+func (c *UserAuthClient) QueryUser(_m *UserAuth) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userauth.Table, userauth.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, userauth.UserTable, userauth.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *UserAuthClient) Hooks() []Hook {
+	return c.hooks.UserAuth
+}
+
+// Interceptors returns the client interceptors.
+func (c *UserAuthClient) Interceptors() []Interceptor {
+	return c.inters.UserAuth
+}
+
+func (c *UserAuthClient) mutate(ctx context.Context, m *UserAuthMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&UserAuthCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&UserAuthUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&UserAuthUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&UserAuthDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown UserAuth mutation op: %q", m.Op())
+	}
+}
+
+// UserConfigClient is a client for the UserConfig schema.
+type UserConfigClient struct {
+	config
+}
+
+// NewUserConfigClient returns a client for the UserConfig from the given config.
+func NewUserConfigClient(c config) *UserConfigClient {
+	return &UserConfigClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `userconfig.Hooks(f(g(h())))`.
+func (c *UserConfigClient) Use(hooks ...Hook) {
+	c.hooks.UserConfig = append(c.hooks.UserConfig, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `userconfig.Intercept(f(g(h())))`.
+func (c *UserConfigClient) Intercept(interceptors ...Interceptor) {
+	c.inters.UserConfig = append(c.inters.UserConfig, interceptors...)
+}
+
+// Create returns a builder for creating a UserConfig entity.
+func (c *UserConfigClient) Create() *UserConfigCreate {
+	mutation := newUserConfigMutation(c.config, OpCreate)
+	return &UserConfigCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of UserConfig entities.
+func (c *UserConfigClient) CreateBulk(builders ...*UserConfigCreate) *UserConfigCreateBulk {
+	return &UserConfigCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *UserConfigClient) MapCreateBulk(slice any, setFunc func(*UserConfigCreate, int)) *UserConfigCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &UserConfigCreateBulk{err: fmt.Errorf("calling to UserConfigClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*UserConfigCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &UserConfigCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for UserConfig.
+func (c *UserConfigClient) Update() *UserConfigUpdate {
+	mutation := newUserConfigMutation(c.config, OpUpdate)
+	return &UserConfigUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *UserConfigClient) UpdateOne(_m *UserConfig) *UserConfigUpdateOne {
+	mutation := newUserConfigMutation(c.config, OpUpdateOne, withUserConfig(_m))
+	return &UserConfigUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *UserConfigClient) UpdateOneID(id uuid.UUID) *UserConfigUpdateOne {
+	mutation := newUserConfigMutation(c.config, OpUpdateOne, withUserConfigID(id))
+	return &UserConfigUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for UserConfig.
+func (c *UserConfigClient) Delete() *UserConfigDelete {
+	mutation := newUserConfigMutation(c.config, OpDelete)
+	return &UserConfigDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *UserConfigClient) DeleteOne(_m *UserConfig) *UserConfigDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *UserConfigClient) DeleteOneID(id uuid.UUID) *UserConfigDeleteOne {
+	builder := c.Delete().Where(userconfig.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &UserConfigDeleteOne{builder}
+}
+
+// Query returns a query builder for UserConfig.
+func (c *UserConfigClient) Query() *UserConfigQuery {
+	return &UserConfigQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeUserConfig},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a UserConfig entity by its id.
+func (c *UserConfigClient) Get(ctx context.Context, id uuid.UUID) (*UserConfig, error) {
+	return c.Query().Where(userconfig.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *UserConfigClient) GetX(ctx context.Context, id uuid.UUID) *UserConfig {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryUser queries the user edge of a UserConfig.
+func (c *UserConfigClient) QueryUser(_m *UserConfig) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userconfig.Table, userconfig.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, userconfig.UserTable, userconfig.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAnonymousUser queries the anonymous_user edge of a UserConfig.
+func (c *UserConfigClient) QueryAnonymousUser(_m *UserConfig) *AnonymousUserQuery {
+	query := (&AnonymousUserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userconfig.Table, userconfig.FieldID, id),
+			sqlgraph.To(anonymoususer.Table, anonymoususer.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, userconfig.AnonymousUserTable, userconfig.AnonymousUserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryHistory queries the history edge of a UserConfig.
+func (c *UserConfigClient) QueryHistory(_m *UserConfig) *ConfigHistoryQuery {
+	query := (&ConfigHistoryClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userconfig.Table, userconfig.FieldID, id),
+			sqlgraph.To(confighistory.Table, confighistory.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, userconfig.HistoryTable, userconfig.HistoryColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *UserConfigClient) Hooks() []Hook {
+	return c.hooks.UserConfig
+}
+
+// Interceptors returns the client interceptors.
+func (c *UserConfigClient) Interceptors() []Interceptor {
+	return c.inters.UserConfig
+}
+
+func (c *UserConfigClient) mutate(ctx context.Context, m *UserConfigMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&UserConfigCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&UserConfigUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&UserConfigUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&UserConfigDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown UserConfig mutation op: %q", m.Op())
+	}
+}
+
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Post, User []ent.Hook
+		AnonymousUser, ConfigHistory, ExportRecord, User, UserAuth,
+		UserConfig []ent.Hook
 	}
 	inters struct {
-		Post, User []ent.Interceptor
+		AnonymousUser, ConfigHistory, ExportRecord, User, UserAuth,
+		UserConfig []ent.Interceptor
 	}
 )

@@ -3,7 +3,7 @@
 package ent
 
 import (
-	"fiber-ent-apollo-pg/ent/user"
+	"fiber-ent-apollo-pg/ent/anonymoususer"
 	"fmt"
 	"strings"
 	"time"
@@ -13,66 +13,53 @@ import (
 	"github.com/google/uuid"
 )
 
-// User is the model entity for the User schema.
-type User struct {
+// AnonymousUser is the model entity for the AnonymousUser schema.
+type AnonymousUser struct {
 	config `json:"-"`
 	// ID of the ent.
-	// 用户唯一标识
+	// 匿名用户唯一标识
 	ID uuid.UUID `json:"id,omitempty"`
-	// 用户名，全局唯一
-	Username string `json:"username,omitempty"`
-	// 显示名称
-	DisplayName string `json:"display_name,omitempty"`
-	// 主邮箱
-	Email string `json:"email,omitempty"`
-	// 头像URL
-	AvatarURL string `json:"avatar_url,omitempty"`
-	// 个人简介
-	Bio string `json:"bio,omitempty"`
-	// 时区设置
+	// 浏览器指纹唯一标识
+	BrowserFingerprint string `json:"browser_fingerprint,omitempty"`
+	// 用户代理字符串
+	UserAgent string `json:"user_agent,omitempty"`
+	// IP地址
+	IPAddress string `json:"ip_address,omitempty"`
+	// 时区信息
 	Timezone string `json:"timezone,omitempty"`
-	// 语言偏好
+	// 语言设置
 	Language string `json:"language,omitempty"`
-	// 账号是否激活
+	// 屏幕分辨率
+	ScreenResolution string `json:"screen_resolution,omitempty"`
+	// 是否活跃
 	IsActive bool `json:"is_active,omitempty"`
-	// 最后登录时间
-	LastLoginAt time.Time `json:"last_login_at,omitempty"`
+	// 最后活动时间
+	LastActivityAt time.Time `json:"last_activity_at,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the UserQuery when eager-loading is set.
-	Edges        UserEdges `json:"edges"`
+	// The values are being populated by the AnonymousUserQuery when eager-loading is set.
+	Edges        AnonymousUserEdges `json:"edges"`
 	selectValues sql.SelectValues
 }
 
-// UserEdges holds the relations/edges for other nodes in the graph.
-type UserEdges struct {
-	// 用户的认证方式
-	AuthMethods []*UserAuth `json:"auth_methods,omitempty"`
+// AnonymousUserEdges holds the relations/edges for other nodes in the graph.
+type AnonymousUserEdges struct {
 	// Configs holds the value of the configs edge.
 	Configs []*UserConfig `json:"configs,omitempty"`
 	// ExportRecords holds the value of the export_records edge.
 	ExportRecords []*ExportRecord `json:"export_records,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
-}
-
-// AuthMethodsOrErr returns the AuthMethods value or an error if the edge
-// was not loaded in eager-loading.
-func (e UserEdges) AuthMethodsOrErr() ([]*UserAuth, error) {
-	if e.loadedTypes[0] {
-		return e.AuthMethods, nil
-	}
-	return nil, &NotLoadedError{edge: "auth_methods"}
+	loadedTypes [2]bool
 }
 
 // ConfigsOrErr returns the Configs value or an error if the edge
 // was not loaded in eager-loading.
-func (e UserEdges) ConfigsOrErr() ([]*UserConfig, error) {
-	if e.loadedTypes[1] {
+func (e AnonymousUserEdges) ConfigsOrErr() ([]*UserConfig, error) {
+	if e.loadedTypes[0] {
 		return e.Configs, nil
 	}
 	return nil, &NotLoadedError{edge: "configs"}
@@ -80,25 +67,25 @@ func (e UserEdges) ConfigsOrErr() ([]*UserConfig, error) {
 
 // ExportRecordsOrErr returns the ExportRecords value or an error if the edge
 // was not loaded in eager-loading.
-func (e UserEdges) ExportRecordsOrErr() ([]*ExportRecord, error) {
-	if e.loadedTypes[2] {
+func (e AnonymousUserEdges) ExportRecordsOrErr() ([]*ExportRecord, error) {
+	if e.loadedTypes[1] {
 		return e.ExportRecords, nil
 	}
 	return nil, &NotLoadedError{edge: "export_records"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*User) scanValues(columns []string) ([]any, error) {
+func (*AnonymousUser) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldIsActive:
+		case anonymoususer.FieldIsActive:
 			values[i] = new(sql.NullBool)
-		case user.FieldUsername, user.FieldDisplayName, user.FieldEmail, user.FieldAvatarURL, user.FieldBio, user.FieldTimezone, user.FieldLanguage:
+		case anonymoususer.FieldBrowserFingerprint, anonymoususer.FieldUserAgent, anonymoususer.FieldIPAddress, anonymoususer.FieldTimezone, anonymoususer.FieldLanguage, anonymoususer.FieldScreenResolution:
 			values[i] = new(sql.NullString)
-		case user.FieldLastLoginAt, user.FieldCreatedAt, user.FieldUpdatedAt:
+		case anonymoususer.FieldLastActivityAt, anonymoususer.FieldCreatedAt, anonymoususer.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case user.FieldID:
+		case anonymoususer.FieldID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -108,80 +95,74 @@ func (*User) scanValues(columns []string) ([]any, error) {
 }
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
-// to the User fields.
-func (_m *User) assignValues(columns []string, values []any) error {
+// to the AnonymousUser fields.
+func (_m *AnonymousUser) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldID:
+		case anonymoususer.FieldID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
 				_m.ID = *value
 			}
-		case user.FieldUsername:
+		case anonymoususer.FieldBrowserFingerprint:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field username", values[i])
+				return fmt.Errorf("unexpected type %T for field browser_fingerprint", values[i])
 			} else if value.Valid {
-				_m.Username = value.String
+				_m.BrowserFingerprint = value.String
 			}
-		case user.FieldDisplayName:
+		case anonymoususer.FieldUserAgent:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field display_name", values[i])
+				return fmt.Errorf("unexpected type %T for field user_agent", values[i])
 			} else if value.Valid {
-				_m.DisplayName = value.String
+				_m.UserAgent = value.String
 			}
-		case user.FieldEmail:
+		case anonymoususer.FieldIPAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field email", values[i])
+				return fmt.Errorf("unexpected type %T for field ip_address", values[i])
 			} else if value.Valid {
-				_m.Email = value.String
+				_m.IPAddress = value.String
 			}
-		case user.FieldAvatarURL:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field avatar_url", values[i])
-			} else if value.Valid {
-				_m.AvatarURL = value.String
-			}
-		case user.FieldBio:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field bio", values[i])
-			} else if value.Valid {
-				_m.Bio = value.String
-			}
-		case user.FieldTimezone:
+		case anonymoususer.FieldTimezone:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field timezone", values[i])
 			} else if value.Valid {
 				_m.Timezone = value.String
 			}
-		case user.FieldLanguage:
+		case anonymoususer.FieldLanguage:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field language", values[i])
 			} else if value.Valid {
 				_m.Language = value.String
 			}
-		case user.FieldIsActive:
+		case anonymoususer.FieldScreenResolution:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field screen_resolution", values[i])
+			} else if value.Valid {
+				_m.ScreenResolution = value.String
+			}
+		case anonymoususer.FieldIsActive:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field is_active", values[i])
 			} else if value.Valid {
 				_m.IsActive = value.Bool
 			}
-		case user.FieldLastLoginAt:
+		case anonymoususer.FieldLastActivityAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field last_login_at", values[i])
+				return fmt.Errorf("unexpected type %T for field last_activity_at", values[i])
 			} else if value.Valid {
-				_m.LastLoginAt = value.Time
+				_m.LastActivityAt = value.Time
 			}
-		case user.FieldCreatedAt:
+		case anonymoususer.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
 				_m.CreatedAt = value.Time
 			}
-		case user.FieldUpdatedAt:
+		case anonymoususer.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
@@ -194,64 +175,53 @@ func (_m *User) assignValues(columns []string, values []any) error {
 	return nil
 }
 
-// Value returns the ent.Value that was dynamically selected and assigned to the User.
+// Value returns the ent.Value that was dynamically selected and assigned to the AnonymousUser.
 // This includes values selected through modifiers, order, etc.
-func (_m *User) Value(name string) (ent.Value, error) {
+func (_m *AnonymousUser) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
-// QueryAuthMethods queries the "auth_methods" edge of the User entity.
-func (_m *User) QueryAuthMethods() *UserAuthQuery {
-	return NewUserClient(_m.config).QueryAuthMethods(_m)
+// QueryConfigs queries the "configs" edge of the AnonymousUser entity.
+func (_m *AnonymousUser) QueryConfigs() *UserConfigQuery {
+	return NewAnonymousUserClient(_m.config).QueryConfigs(_m)
 }
 
-// QueryConfigs queries the "configs" edge of the User entity.
-func (_m *User) QueryConfigs() *UserConfigQuery {
-	return NewUserClient(_m.config).QueryConfigs(_m)
+// QueryExportRecords queries the "export_records" edge of the AnonymousUser entity.
+func (_m *AnonymousUser) QueryExportRecords() *ExportRecordQuery {
+	return NewAnonymousUserClient(_m.config).QueryExportRecords(_m)
 }
 
-// QueryExportRecords queries the "export_records" edge of the User entity.
-func (_m *User) QueryExportRecords() *ExportRecordQuery {
-	return NewUserClient(_m.config).QueryExportRecords(_m)
-}
-
-// Update returns a builder for updating this User.
-// Note that you need to call User.Unwrap() before calling this method if this User
+// Update returns a builder for updating this AnonymousUser.
+// Note that you need to call AnonymousUser.Unwrap() before calling this method if this AnonymousUser
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (_m *User) Update() *UserUpdateOne {
-	return NewUserClient(_m.config).UpdateOne(_m)
+func (_m *AnonymousUser) Update() *AnonymousUserUpdateOne {
+	return NewAnonymousUserClient(_m.config).UpdateOne(_m)
 }
 
-// Unwrap unwraps the User entity that was returned from a transaction after it was closed,
+// Unwrap unwraps the AnonymousUser entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (_m *User) Unwrap() *User {
+func (_m *AnonymousUser) Unwrap() *AnonymousUser {
 	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
-		panic("ent: User is not a transactional entity")
+		panic("ent: AnonymousUser is not a transactional entity")
 	}
 	_m.config.driver = _tx.drv
 	return _m
 }
 
 // String implements the fmt.Stringer.
-func (_m *User) String() string {
+func (_m *AnonymousUser) String() string {
 	var builder strings.Builder
-	builder.WriteString("User(")
+	builder.WriteString("AnonymousUser(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
-	builder.WriteString("username=")
-	builder.WriteString(_m.Username)
+	builder.WriteString("browser_fingerprint=")
+	builder.WriteString(_m.BrowserFingerprint)
 	builder.WriteString(", ")
-	builder.WriteString("display_name=")
-	builder.WriteString(_m.DisplayName)
+	builder.WriteString("user_agent=")
+	builder.WriteString(_m.UserAgent)
 	builder.WriteString(", ")
-	builder.WriteString("email=")
-	builder.WriteString(_m.Email)
-	builder.WriteString(", ")
-	builder.WriteString("avatar_url=")
-	builder.WriteString(_m.AvatarURL)
-	builder.WriteString(", ")
-	builder.WriteString("bio=")
-	builder.WriteString(_m.Bio)
+	builder.WriteString("ip_address=")
+	builder.WriteString(_m.IPAddress)
 	builder.WriteString(", ")
 	builder.WriteString("timezone=")
 	builder.WriteString(_m.Timezone)
@@ -259,11 +229,14 @@ func (_m *User) String() string {
 	builder.WriteString("language=")
 	builder.WriteString(_m.Language)
 	builder.WriteString(", ")
+	builder.WriteString("screen_resolution=")
+	builder.WriteString(_m.ScreenResolution)
+	builder.WriteString(", ")
 	builder.WriteString("is_active=")
 	builder.WriteString(fmt.Sprintf("%v", _m.IsActive))
 	builder.WriteString(", ")
-	builder.WriteString("last_login_at=")
-	builder.WriteString(_m.LastLoginAt.Format(time.ANSIC))
+	builder.WriteString("last_activity_at=")
+	builder.WriteString(_m.LastActivityAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
@@ -274,5 +247,5 @@ func (_m *User) String() string {
 	return builder.String()
 }
 
-// Users is a parsable slice of User.
-type Users []*User
+// AnonymousUsers is a parsable slice of AnonymousUser.
+type AnonymousUsers []*AnonymousUser

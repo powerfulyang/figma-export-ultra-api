@@ -7,20 +7,20 @@ import (
 
 // PageMeta contains pagination metadata for API responses
 type PageMeta struct {
-	Limit         int    `json:"limit"`
-	Offset        int    `json:"offset,omitempty"`
-	Count         int    `json:"count"`
-	NextOffset    *int   `json:"next_offset,omitempty"`
-	Cursor        *int   `json:"cursor,omitempty"`
-	NextCursor    *int   `json:"next_cursor,omitempty"`
-	CursorEnc     string `json:"cursor_enc,omitempty"`
-	NextCursorEnc string `json:"next_cursor_enc,omitempty"`
-	HasMore       bool   `json:"has_more,omitempty"`
-	Mode          string `json:"mode,omitempty"` // offset | cursor
-	Snapshot      string `json:"snapshot,omitempty"`
-	CursorTS      string `json:"cursor_ts,omitempty"`
-	NextCursorTS  string `json:"next_cursor_ts,omitempty"`
-	Total         *int   `json:"total,omitempty"`
+	Limit         int     `json:"limit"`
+	Offset        int     `json:"offset,omitempty"`
+	Count         int     `json:"count"`
+	NextOffset    *int    `json:"next_offset,omitempty"`
+	Cursor        *string `json:"cursor,omitempty"`
+	NextCursor    *string `json:"next_cursor,omitempty"`
+	CursorEnc     string  `json:"cursor_enc,omitempty"`
+	NextCursorEnc string  `json:"next_cursor_enc,omitempty"`
+	HasMore       bool    `json:"has_more,omitempty"`
+	Mode          string  `json:"mode,omitempty"` // offset | cursor
+	Snapshot      string  `json:"snapshot,omitempty"`
+	CursorTS      string  `json:"cursor_ts,omitempty"`
+	NextCursorTS  string  `json:"next_cursor_ts,omitempty"`
+	Total         *int    `json:"total,omitempty"`
 }
 
 func requestID(c *fiber.Ctx) string {

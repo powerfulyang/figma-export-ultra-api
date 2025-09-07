@@ -27,18 +27,10 @@ func TestParseSortSpec(t *testing.T) {
 func TestApplyUserSort_ValidateField(t *testing.T) {
 	c := ent.NewClient()
 	q := c.User.Query()
-	if _, err := applyUserSort(q, "name:asc"); err != nil {
+	if _, err := applyUserSort(q, "username:asc"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if _, err := applyUserSort(q, "unknown:asc"); err == nil {
 		t.Fatalf("expected error for unknown field")
-	}
-}
-
-func TestApplyPostSort_OK(t *testing.T) {
-	c := ent.NewClient()
-	q := c.Post.Query()
-	if _, err := applyPostSort(q, "id:desc"); err != nil {
-		t.Fatalf("unexpected error: %v", err)
 	}
 }

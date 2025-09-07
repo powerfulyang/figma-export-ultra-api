@@ -5,13 +5,16 @@ package ent
 import (
 	"context"
 	"errors"
-	"fiber-ent-apollo-pg/ent/post"
+	"fiber-ent-apollo-pg/ent/exportrecord"
 	"fiber-ent-apollo-pg/ent/user"
+	"fiber-ent-apollo-pg/ent/userauth"
+	"fiber-ent-apollo-pg/ent/userconfig"
 	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 )
 
 // UserCreate is the builder for creating a User entity.
@@ -21,9 +24,113 @@ type UserCreate struct {
 	hooks    []Hook
 }
 
-// SetName sets the "name" field.
-func (_c *UserCreate) SetName(v string) *UserCreate {
-	_c.mutation.SetName(v)
+// SetUsername sets the "username" field.
+func (_c *UserCreate) SetUsername(v string) *UserCreate {
+	_c.mutation.SetUsername(v)
+	return _c
+}
+
+// SetDisplayName sets the "display_name" field.
+func (_c *UserCreate) SetDisplayName(v string) *UserCreate {
+	_c.mutation.SetDisplayName(v)
+	return _c
+}
+
+// SetNillableDisplayName sets the "display_name" field if the given value is not nil.
+func (_c *UserCreate) SetNillableDisplayName(v *string) *UserCreate {
+	if v != nil {
+		_c.SetDisplayName(*v)
+	}
+	return _c
+}
+
+// SetEmail sets the "email" field.
+func (_c *UserCreate) SetEmail(v string) *UserCreate {
+	_c.mutation.SetEmail(v)
+	return _c
+}
+
+// SetNillableEmail sets the "email" field if the given value is not nil.
+func (_c *UserCreate) SetNillableEmail(v *string) *UserCreate {
+	if v != nil {
+		_c.SetEmail(*v)
+	}
+	return _c
+}
+
+// SetAvatarURL sets the "avatar_url" field.
+func (_c *UserCreate) SetAvatarURL(v string) *UserCreate {
+	_c.mutation.SetAvatarURL(v)
+	return _c
+}
+
+// SetNillableAvatarURL sets the "avatar_url" field if the given value is not nil.
+func (_c *UserCreate) SetNillableAvatarURL(v *string) *UserCreate {
+	if v != nil {
+		_c.SetAvatarURL(*v)
+	}
+	return _c
+}
+
+// SetBio sets the "bio" field.
+func (_c *UserCreate) SetBio(v string) *UserCreate {
+	_c.mutation.SetBio(v)
+	return _c
+}
+
+// SetNillableBio sets the "bio" field if the given value is not nil.
+func (_c *UserCreate) SetNillableBio(v *string) *UserCreate {
+	if v != nil {
+		_c.SetBio(*v)
+	}
+	return _c
+}
+
+// SetTimezone sets the "timezone" field.
+func (_c *UserCreate) SetTimezone(v string) *UserCreate {
+	_c.mutation.SetTimezone(v)
+	return _c
+}
+
+// SetNillableTimezone sets the "timezone" field if the given value is not nil.
+func (_c *UserCreate) SetNillableTimezone(v *string) *UserCreate {
+	if v != nil {
+		_c.SetTimezone(*v)
+	}
+	return _c
+}
+
+// SetLanguage sets the "language" field.
+func (_c *UserCreate) SetLanguage(v string) *UserCreate {
+	_c.mutation.SetLanguage(v)
+	return _c
+}
+
+// SetNillableLanguage sets the "language" field if the given value is not nil.
+func (_c *UserCreate) SetNillableLanguage(v *string) *UserCreate {
+	if v != nil {
+		_c.SetLanguage(*v)
+	}
+	return _c
+}
+
+// SetIsActive sets the "is_active" field.
+func (_c *UserCreate) SetIsActive(v bool) *UserCreate {
+	_c.mutation.SetIsActive(v)
+	return _c
+}
+
+// SetLastLoginAt sets the "last_login_at" field.
+func (_c *UserCreate) SetLastLoginAt(v time.Time) *UserCreate {
+	_c.mutation.SetLastLoginAt(v)
+	return _c
+}
+
+// SetNillableLastLoginAt sets the "last_login_at" field if the given value is not nil.
+func (_c *UserCreate) SetNillableLastLoginAt(v *time.Time) *UserCreate {
+	if v != nil {
+		_c.SetLastLoginAt(*v)
+	}
 	return _c
 }
 
@@ -33,41 +140,69 @@ func (_c *UserCreate) SetCreatedAt(v time.Time) *UserCreate {
 	return _c
 }
 
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (_c *UserCreate) SetNillableCreatedAt(v *time.Time) *UserCreate {
-	if v != nil {
-		_c.SetCreatedAt(*v)
-	}
-	return _c
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (_c *UserCreate) SetUpdatedAt(v time.Time) *UserCreate {
 	_c.mutation.SetUpdatedAt(v)
 	return _c
 }
 
-// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (_c *UserCreate) SetNillableUpdatedAt(v *time.Time) *UserCreate {
+// SetID sets the "id" field.
+func (_c *UserCreate) SetID(v uuid.UUID) *UserCreate {
+	_c.mutation.SetID(v)
+	return _c
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (_c *UserCreate) SetNillableID(v *uuid.UUID) *UserCreate {
 	if v != nil {
-		_c.SetUpdatedAt(*v)
+		_c.SetID(*v)
 	}
 	return _c
 }
 
-// AddPostIDs adds the "posts" edge to the Post entity by IDs.
-func (_c *UserCreate) AddPostIDs(ids ...int) *UserCreate {
-	_c.mutation.AddPostIDs(ids...)
+// AddAuthMethodIDs adds the "auth_methods" edge to the UserAuth entity by IDs.
+func (_c *UserCreate) AddAuthMethodIDs(ids ...uuid.UUID) *UserCreate {
+	_c.mutation.AddAuthMethodIDs(ids...)
 	return _c
 }
 
-// AddPosts adds the "posts" edges to the Post entity.
-func (_c *UserCreate) AddPosts(v ...*Post) *UserCreate {
-	ids := make([]int, len(v))
+// AddAuthMethods adds the "auth_methods" edges to the UserAuth entity.
+func (_c *UserCreate) AddAuthMethods(v ...*UserAuth) *UserCreate {
+	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _c.AddPostIDs(ids...)
+	return _c.AddAuthMethodIDs(ids...)
+}
+
+// AddConfigIDs adds the "configs" edge to the UserConfig entity by IDs.
+func (_c *UserCreate) AddConfigIDs(ids ...uuid.UUID) *UserCreate {
+	_c.mutation.AddConfigIDs(ids...)
+	return _c
+}
+
+// AddConfigs adds the "configs" edges to the UserConfig entity.
+func (_c *UserCreate) AddConfigs(v ...*UserConfig) *UserCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddConfigIDs(ids...)
+}
+
+// AddExportRecordIDs adds the "export_records" edge to the ExportRecord entity by IDs.
+func (_c *UserCreate) AddExportRecordIDs(ids ...uuid.UUID) *UserCreate {
+	_c.mutation.AddExportRecordIDs(ids...)
+	return _c
+}
+
+// AddExportRecords adds the "export_records" edges to the ExportRecord entity.
+func (_c *UserCreate) AddExportRecords(v ...*ExportRecord) *UserCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddExportRecordIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -105,25 +240,24 @@ func (_c *UserCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *UserCreate) defaults() {
-	if _, ok := _c.mutation.CreatedAt(); !ok {
-		v := user.DefaultCreatedAt()
-		_c.mutation.SetCreatedAt(v)
-	}
-	if _, ok := _c.mutation.UpdatedAt(); !ok {
-		v := user.DefaultUpdatedAt()
-		_c.mutation.SetUpdatedAt(v)
+	if _, ok := _c.mutation.ID(); !ok {
+		v := user.DefaultID()
+		_c.mutation.SetID(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *UserCreate) check() error {
-	if _, ok := _c.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "User.name"`)}
+	if _, ok := _c.mutation.Username(); !ok {
+		return &ValidationError{Name: "username", err: errors.New(`ent: missing required field "User.username"`)}
 	}
-	if v, ok := _c.mutation.Name(); ok {
-		if err := user.NameValidator(v); err != nil {
-			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "User.name": %w`, err)}
+	if v, ok := _c.mutation.Username(); ok {
+		if err := user.UsernameValidator(v); err != nil {
+			return &ValidationError{Name: "username", err: fmt.Errorf(`ent: validator failed for field "User.username": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.IsActive(); !ok {
+		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "User.is_active"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "User.created_at"`)}
@@ -145,8 +279,13 @@ func (_c *UserCreate) sqlSave(ctx context.Context) (*User, error) {
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != nil {
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
+	}
 	_c.mutation.id = &_node.ID
 	_c.mutation.done = true
 	return _node, nil
@@ -155,11 +294,47 @@ func (_c *UserCreate) sqlSave(ctx context.Context) (*User, error) {
 func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	var (
 		_node = &User{config: _c.config}
-		_spec = sqlgraph.NewCreateSpec(user.Table, sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt))
+		_spec = sqlgraph.NewCreateSpec(user.Table, sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID))
 	)
-	if value, ok := _c.mutation.Name(); ok {
-		_spec.SetField(user.FieldName, field.TypeString, value)
-		_node.Name = value
+	if id, ok := _c.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = &id
+	}
+	if value, ok := _c.mutation.Username(); ok {
+		_spec.SetField(user.FieldUsername, field.TypeString, value)
+		_node.Username = value
+	}
+	if value, ok := _c.mutation.DisplayName(); ok {
+		_spec.SetField(user.FieldDisplayName, field.TypeString, value)
+		_node.DisplayName = value
+	}
+	if value, ok := _c.mutation.Email(); ok {
+		_spec.SetField(user.FieldEmail, field.TypeString, value)
+		_node.Email = value
+	}
+	if value, ok := _c.mutation.AvatarURL(); ok {
+		_spec.SetField(user.FieldAvatarURL, field.TypeString, value)
+		_node.AvatarURL = value
+	}
+	if value, ok := _c.mutation.Bio(); ok {
+		_spec.SetField(user.FieldBio, field.TypeString, value)
+		_node.Bio = value
+	}
+	if value, ok := _c.mutation.Timezone(); ok {
+		_spec.SetField(user.FieldTimezone, field.TypeString, value)
+		_node.Timezone = value
+	}
+	if value, ok := _c.mutation.Language(); ok {
+		_spec.SetField(user.FieldLanguage, field.TypeString, value)
+		_node.Language = value
+	}
+	if value, ok := _c.mutation.IsActive(); ok {
+		_spec.SetField(user.FieldIsActive, field.TypeBool, value)
+		_node.IsActive = value
+	}
+	if value, ok := _c.mutation.LastLoginAt(); ok {
+		_spec.SetField(user.FieldLastLoginAt, field.TypeTime, value)
+		_node.LastLoginAt = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(user.FieldCreatedAt, field.TypeTime, value)
@@ -169,15 +344,47 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		_spec.SetField(user.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if nodes := _c.mutation.PostsIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.AuthMethodsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.PostsTable,
-			Columns: []string{user.PostsColumn},
+			Table:   user.AuthMethodsTable,
+			Columns: []string{user.AuthMethodsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(post.FieldID, field.TypeInt),
+				IDSpec: sqlgraph.NewFieldSpec(userauth.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ConfigsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ConfigsTable,
+			Columns: []string{user.ConfigsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userconfig.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ExportRecordsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ExportRecordsTable,
+			Columns: []string{user.ExportRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(exportrecord.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -233,10 +440,6 @@ func (_c *UserCreateBulk) Save(ctx context.Context) ([]*User, error) {
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
-				if specs[i].ID.Value != nil {
-					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int(id)
-				}
 				mutation.done = true
 				return nodes[i], nil
 			})

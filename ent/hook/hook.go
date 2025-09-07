@@ -8,16 +8,40 @@ import (
 	"fmt"
 )
 
-// The PostFunc type is an adapter to allow the use of ordinary
-// function as Post mutator.
-type PostFunc func(context.Context, *ent.PostMutation) (ent.Value, error)
+// The AnonymousUserFunc type is an adapter to allow the use of ordinary
+// function as AnonymousUser mutator.
+type AnonymousUserFunc func(context.Context, *ent.AnonymousUserMutation) (ent.Value, error)
 
 // Mutate calls f(ctx, m).
-func (f PostFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.PostMutation); ok {
+func (f AnonymousUserFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AnonymousUserMutation); ok {
 		return f(ctx, mv)
 	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PostMutation", m)
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AnonymousUserMutation", m)
+}
+
+// The ConfigHistoryFunc type is an adapter to allow the use of ordinary
+// function as ConfigHistory mutator.
+type ConfigHistoryFunc func(context.Context, *ent.ConfigHistoryMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ConfigHistoryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ConfigHistoryMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ConfigHistoryMutation", m)
+}
+
+// The ExportRecordFunc type is an adapter to allow the use of ordinary
+// function as ExportRecord mutator.
+type ExportRecordFunc func(context.Context, *ent.ExportRecordMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ExportRecordFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ExportRecordMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ExportRecordMutation", m)
 }
 
 // The UserFunc type is an adapter to allow the use of ordinary
@@ -30,6 +54,30 @@ func (f UserFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error)
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UserMutation", m)
+}
+
+// The UserAuthFunc type is an adapter to allow the use of ordinary
+// function as UserAuth mutator.
+type UserAuthFunc func(context.Context, *ent.UserAuthMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f UserAuthFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.UserAuthMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UserAuthMutation", m)
+}
+
+// The UserConfigFunc type is an adapter to allow the use of ordinary
+// function as UserConfig mutator.
+type UserConfigFunc func(context.Context, *ent.UserConfigMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f UserConfigFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.UserConfigMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UserConfigMutation", m)
 }
 
 // Condition is a hook condition function.

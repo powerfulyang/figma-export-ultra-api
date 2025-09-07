@@ -9,10 +9,11 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 )
 
 func TestCursorEncodeDecode_Binary(t *testing.T) {
-	id := 12345
+	id := uuid.New().String()
 	ts := time.Unix(1700000000, 123456789).UTC()
 	enc := encodeCursor(id, ts)
 	got, err := decodeCursor(enc)
@@ -20,7 +21,7 @@ func TestCursorEncodeDecode_Binary(t *testing.T) {
 		t.Fatalf("decode error: %v", err)
 	}
 	if got.ID != id {
-		t.Fatalf("id mismatch: %d != %d", got.ID, id)
+		t.Fatalf("id mismatch: %s != %s", got.ID, id)
 	}
 	if !got.TS.Equal(ts) {
 		t.Fatalf("ts mismatch: %v != %v", got.TS, ts)

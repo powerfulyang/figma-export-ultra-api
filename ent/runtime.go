@@ -3,50 +3,104 @@
 package ent
 
 import (
-	"fiber-ent-apollo-pg/ent/post"
+	"fiber-ent-apollo-pg/ent/anonymoususer"
+	"fiber-ent-apollo-pg/ent/confighistory"
+	"fiber-ent-apollo-pg/ent/exportrecord"
 	"fiber-ent-apollo-pg/ent/schema"
 	"fiber-ent-apollo-pg/ent/user"
+	"fiber-ent-apollo-pg/ent/userauth"
+	"fiber-ent-apollo-pg/ent/userconfig"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // The init function reads all schema descriptors with runtime code
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
-	postFields := schema.Post{}.Fields()
-	_ = postFields
-	// postDescTitle is the schema descriptor for title field.
-	postDescTitle := postFields[0].Descriptor()
-	// post.TitleValidator is a validator for the "title" field. It is called by the builders before save.
-	post.TitleValidator = postDescTitle.Validators[0].(func(string) error)
-	// postDescContent is the schema descriptor for content field.
-	postDescContent := postFields[1].Descriptor()
-	// post.DefaultContent holds the default value on creation for the content field.
-	post.DefaultContent = postDescContent.Default.(string)
-	// postDescCreatedAt is the schema descriptor for created_at field.
-	postDescCreatedAt := postFields[2].Descriptor()
-	// post.DefaultCreatedAt holds the default value on creation for the created_at field.
-	post.DefaultCreatedAt = postDescCreatedAt.Default.(func() time.Time)
-	// postDescUpdatedAt is the schema descriptor for updated_at field.
-	postDescUpdatedAt := postFields[3].Descriptor()
-	// post.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	post.DefaultUpdatedAt = postDescUpdatedAt.Default.(func() time.Time)
-	// post.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	post.UpdateDefaultUpdatedAt = postDescUpdatedAt.UpdateDefault.(func() time.Time)
+	anonymoususerFields := schema.AnonymousUser{}.Fields()
+	_ = anonymoususerFields
+	// anonymoususerDescBrowserFingerprint is the schema descriptor for browser_fingerprint field.
+	anonymoususerDescBrowserFingerprint := anonymoususerFields[1].Descriptor()
+	// anonymoususer.BrowserFingerprintValidator is a validator for the "browser_fingerprint" field. It is called by the builders before save.
+	anonymoususer.BrowserFingerprintValidator = anonymoususerDescBrowserFingerprint.Validators[0].(func(string) error)
+	// anonymoususerDescUpdatedAt is the schema descriptor for updated_at field.
+	anonymoususerDescUpdatedAt := anonymoususerFields[10].Descriptor()
+	// anonymoususer.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	anonymoususer.UpdateDefaultUpdatedAt = anonymoususerDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// anonymoususerDescID is the schema descriptor for id field.
+	anonymoususerDescID := anonymoususerFields[0].Descriptor()
+	// anonymoususer.DefaultID holds the default value on creation for the id field.
+	anonymoususer.DefaultID = anonymoususerDescID.Default.(func() uuid.UUID)
+	confighistoryFields := schema.ConfigHistory{}.Fields()
+	_ = confighistoryFields
+	// confighistoryDescChangeType is the schema descriptor for change_type field.
+	confighistoryDescChangeType := confighistoryFields[3].Descriptor()
+	// confighistory.ChangeTypeValidator is a validator for the "change_type" field. It is called by the builders before save.
+	confighistory.ChangeTypeValidator = confighistoryDescChangeType.Validators[0].(func(string) error)
+	// confighistoryDescNewVersion is the schema descriptor for new_version field.
+	confighistoryDescNewVersion := confighistoryFields[6].Descriptor()
+	// confighistory.NewVersionValidator is a validator for the "new_version" field. It is called by the builders before save.
+	confighistory.NewVersionValidator = confighistoryDescNewVersion.Validators[0].(func(string) error)
+	// confighistoryDescID is the schema descriptor for id field.
+	confighistoryDescID := confighistoryFields[0].Descriptor()
+	// confighistory.DefaultID holds the default value on creation for the id field.
+	confighistory.DefaultID = confighistoryDescID.Default.(func() uuid.UUID)
+	exportrecordFields := schema.ExportRecord{}.Fields()
+	_ = exportrecordFields
+	// exportrecordDescFigmaFileID is the schema descriptor for figma_file_id field.
+	exportrecordDescFigmaFileID := exportrecordFields[1].Descriptor()
+	// exportrecord.FigmaFileIDValidator is a validator for the "figma_file_id" field. It is called by the builders before save.
+	exportrecord.FigmaFileIDValidator = exportrecordDescFigmaFileID.Validators[0].(func(string) error)
+	// exportrecordDescUpdatedAt is the schema descriptor for updated_at field.
+	exportrecordDescUpdatedAt := exportrecordFields[19].Descriptor()
+	// exportrecord.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	exportrecord.UpdateDefaultUpdatedAt = exportrecordDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// exportrecordDescID is the schema descriptor for id field.
+	exportrecordDescID := exportrecordFields[0].Descriptor()
+	// exportrecord.DefaultID holds the default value on creation for the id field.
+	exportrecord.DefaultID = exportrecordDescID.Default.(func() uuid.UUID)
 	userFields := schema.User{}.Fields()
 	_ = userFields
-	// userDescName is the schema descriptor for name field.
-	userDescName := userFields[0].Descriptor()
-	// user.NameValidator is a validator for the "name" field. It is called by the builders before save.
-	user.NameValidator = userDescName.Validators[0].(func(string) error)
-	// userDescCreatedAt is the schema descriptor for created_at field.
-	userDescCreatedAt := userFields[1].Descriptor()
-	// user.DefaultCreatedAt holds the default value on creation for the created_at field.
-	user.DefaultCreatedAt = userDescCreatedAt.Default.(func() time.Time)
+	// userDescUsername is the schema descriptor for username field.
+	userDescUsername := userFields[1].Descriptor()
+	// user.UsernameValidator is a validator for the "username" field. It is called by the builders before save.
+	user.UsernameValidator = userDescUsername.Validators[0].(func(string) error)
 	// userDescUpdatedAt is the schema descriptor for updated_at field.
-	userDescUpdatedAt := userFields[2].Descriptor()
-	// user.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	user.DefaultUpdatedAt = userDescUpdatedAt.Default.(func() time.Time)
+	userDescUpdatedAt := userFields[11].Descriptor()
 	// user.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	user.UpdateDefaultUpdatedAt = userDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// userDescID is the schema descriptor for id field.
+	userDescID := userFields[0].Descriptor()
+	// user.DefaultID holds the default value on creation for the id field.
+	user.DefaultID = userDescID.Default.(func() uuid.UUID)
+	userauthFields := schema.UserAuth{}.Fields()
+	_ = userauthFields
+	// userauthDescIdentifier is the schema descriptor for identifier field.
+	userauthDescIdentifier := userauthFields[2].Descriptor()
+	// userauth.IdentifierValidator is a validator for the "identifier" field. It is called by the builders before save.
+	userauth.IdentifierValidator = userauthDescIdentifier.Validators[0].(func(string) error)
+	// userauthDescUpdatedAt is the schema descriptor for updated_at field.
+	userauthDescUpdatedAt := userauthFields[16].Descriptor()
+	// userauth.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	userauth.UpdateDefaultUpdatedAt = userauthDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// userauthDescID is the schema descriptor for id field.
+	userauthDescID := userauthFields[0].Descriptor()
+	// userauth.DefaultID holds the default value on creation for the id field.
+	userauth.DefaultID = userauthDescID.Default.(func() uuid.UUID)
+	userconfigFields := schema.UserConfig{}.Fields()
+	_ = userconfigFields
+	// userconfigDescName is the schema descriptor for name field.
+	userconfigDescName := userconfigFields[1].Descriptor()
+	// userconfig.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	userconfig.NameValidator = userconfigDescName.Validators[0].(func(string) error)
+	// userconfigDescUpdatedAt is the schema descriptor for updated_at field.
+	userconfigDescUpdatedAt := userconfigFields[8].Descriptor()
+	// userconfig.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	userconfig.UpdateDefaultUpdatedAt = userconfigDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// userconfigDescID is the schema descriptor for id field.
+	userconfigDescID := userconfigFields[0].Descriptor()
+	// userconfig.DefaultID holds the default value on creation for the id field.
+	userconfig.DefaultID = userconfigDescID.Default.(func() uuid.UUID)
 }

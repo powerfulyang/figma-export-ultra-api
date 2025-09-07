@@ -5,10 +5,10 @@ package ent
 import (
 	"context"
 	"database/sql/driver"
-	"fiber-ent-apollo-pg/ent/exportrecord"
+	"fiber-ent-apollo-pg/ent/anonymoususer"
+	"fiber-ent-apollo-pg/ent/confighistory"
 	"fiber-ent-apollo-pg/ent/predicate"
 	"fiber-ent-apollo-pg/ent/user"
-	"fiber-ent-apollo-pg/ent/userauth"
 	"fiber-ent-apollo-pg/ent/userconfig"
 	"fmt"
 	"math"
@@ -20,55 +20,56 @@ import (
 	"github.com/google/uuid"
 )
 
-// UserQuery is the builder for querying User entities.
-type UserQuery struct {
+// UserConfigQuery is the builder for querying UserConfig entities.
+type UserConfigQuery struct {
 	config
 	ctx               *QueryContext
-	order             []user.OrderOption
+	order             []userconfig.OrderOption
 	inters            []Interceptor
-	predicates        []predicate.User
-	withAuthMethods   *UserAuthQuery
-	withConfigs       *UserConfigQuery
-	withExportRecords *ExportRecordQuery
+	predicates        []predicate.UserConfig
+	withUser          *UserQuery
+	withAnonymousUser *AnonymousUserQuery
+	withHistory       *ConfigHistoryQuery
+	withFKs           bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
 }
 
-// Where adds a new predicate for the UserQuery builder.
-func (_q *UserQuery) Where(ps ...predicate.User) *UserQuery {
+// Where adds a new predicate for the UserConfigQuery builder.
+func (_q *UserConfigQuery) Where(ps ...predicate.UserConfig) *UserConfigQuery {
 	_q.predicates = append(_q.predicates, ps...)
 	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (_q *UserQuery) Limit(limit int) *UserQuery {
+func (_q *UserConfigQuery) Limit(limit int) *UserConfigQuery {
 	_q.ctx.Limit = &limit
 	return _q
 }
 
 // Offset to start from.
-func (_q *UserQuery) Offset(offset int) *UserQuery {
+func (_q *UserConfigQuery) Offset(offset int) *UserConfigQuery {
 	_q.ctx.Offset = &offset
 	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (_q *UserQuery) Unique(unique bool) *UserQuery {
+func (_q *UserConfigQuery) Unique(unique bool) *UserConfigQuery {
 	_q.ctx.Unique = &unique
 	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (_q *UserQuery) Order(o ...user.OrderOption) *UserQuery {
+func (_q *UserConfigQuery) Order(o ...userconfig.OrderOption) *UserConfigQuery {
 	_q.order = append(_q.order, o...)
 	return _q
 }
 
-// QueryAuthMethods chains the current query on the "auth_methods" edge.
-func (_q *UserQuery) QueryAuthMethods() *UserAuthQuery {
-	query := (&UserAuthClient{config: _q.config}).Query()
+// QueryUser chains the current query on the "user" edge.
+func (_q *UserConfigQuery) QueryUser() *UserQuery {
+	query := (&UserClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -78,9 +79,9 @@ func (_q *UserQuery) QueryAuthMethods() *UserAuthQuery {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, selector),
-			sqlgraph.To(userauth.Table, userauth.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.AuthMethodsTable, user.AuthMethodsColumn),
+			sqlgraph.From(userconfig.Table, userconfig.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, userconfig.UserTable, userconfig.UserColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -88,9 +89,9 @@ func (_q *UserQuery) QueryAuthMethods() *UserAuthQuery {
 	return query
 }
 
-// QueryConfigs chains the current query on the "configs" edge.
-func (_q *UserQuery) QueryConfigs() *UserConfigQuery {
-	query := (&UserConfigClient{config: _q.config}).Query()
+// QueryAnonymousUser chains the current query on the "anonymous_user" edge.
+func (_q *UserConfigQuery) QueryAnonymousUser() *AnonymousUserQuery {
+	query := (&AnonymousUserClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -100,9 +101,9 @@ func (_q *UserQuery) QueryConfigs() *UserConfigQuery {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, selector),
-			sqlgraph.To(userconfig.Table, userconfig.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.ConfigsTable, user.ConfigsColumn),
+			sqlgraph.From(userconfig.Table, userconfig.FieldID, selector),
+			sqlgraph.To(anonymoususer.Table, anonymoususer.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, userconfig.AnonymousUserTable, userconfig.AnonymousUserColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -110,9 +111,9 @@ func (_q *UserQuery) QueryConfigs() *UserConfigQuery {
 	return query
 }
 
-// QueryExportRecords chains the current query on the "export_records" edge.
-func (_q *UserQuery) QueryExportRecords() *ExportRecordQuery {
-	query := (&ExportRecordClient{config: _q.config}).Query()
+// QueryHistory chains the current query on the "history" edge.
+func (_q *UserConfigQuery) QueryHistory() *ConfigHistoryQuery {
+	query := (&ConfigHistoryClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -122,9 +123,9 @@ func (_q *UserQuery) QueryExportRecords() *ExportRecordQuery {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, selector),
-			sqlgraph.To(exportrecord.Table, exportrecord.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.ExportRecordsTable, user.ExportRecordsColumn),
+			sqlgraph.From(userconfig.Table, userconfig.FieldID, selector),
+			sqlgraph.To(confighistory.Table, confighistory.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, userconfig.HistoryTable, userconfig.HistoryColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -132,21 +133,21 @@ func (_q *UserQuery) QueryExportRecords() *ExportRecordQuery {
 	return query
 }
 
-// First returns the first User entity from the query.
-// Returns a *NotFoundError when no User was found.
-func (_q *UserQuery) First(ctx context.Context) (*User, error) {
+// First returns the first UserConfig entity from the query.
+// Returns a *NotFoundError when no UserConfig was found.
+func (_q *UserConfigQuery) First(ctx context.Context) (*UserConfig, error) {
 	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
-		return nil, &NotFoundError{user.Label}
+		return nil, &NotFoundError{userconfig.Label}
 	}
 	return nodes[0], nil
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (_q *UserQuery) FirstX(ctx context.Context) *User {
+func (_q *UserConfigQuery) FirstX(ctx context.Context) *UserConfig {
 	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -154,22 +155,22 @@ func (_q *UserQuery) FirstX(ctx context.Context) *User {
 	return node
 }
 
-// FirstID returns the first User ID from the query.
-// Returns a *NotFoundError when no User ID was found.
-func (_q *UserQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+// FirstID returns the first UserConfig ID from the query.
+// Returns a *NotFoundError when no UserConfig ID was found.
+func (_q *UserConfigQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
 	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
-		err = &NotFoundError{user.Label}
+		err = &NotFoundError{userconfig.Label}
 		return
 	}
 	return ids[0], nil
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (_q *UserQuery) FirstIDX(ctx context.Context) uuid.UUID {
+func (_q *UserConfigQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -177,10 +178,10 @@ func (_q *UserQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	return id
 }
 
-// Only returns a single User entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when more than one User entity is found.
-// Returns a *NotFoundError when no User entities are found.
-func (_q *UserQuery) Only(ctx context.Context) (*User, error) {
+// Only returns a single UserConfig entity found by the query, ensuring it only returns one.
+// Returns a *NotSingularError when more than one UserConfig entity is found.
+// Returns a *NotFoundError when no UserConfig entities are found.
+func (_q *UserConfigQuery) Only(ctx context.Context) (*UserConfig, error) {
 	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
@@ -189,14 +190,14 @@ func (_q *UserQuery) Only(ctx context.Context) (*User, error) {
 	case 1:
 		return nodes[0], nil
 	case 0:
-		return nil, &NotFoundError{user.Label}
+		return nil, &NotFoundError{userconfig.Label}
 	default:
-		return nil, &NotSingularError{user.Label}
+		return nil, &NotSingularError{userconfig.Label}
 	}
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (_q *UserQuery) OnlyX(ctx context.Context) *User {
+func (_q *UserConfigQuery) OnlyX(ctx context.Context) *UserConfig {
 	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
@@ -204,10 +205,10 @@ func (_q *UserQuery) OnlyX(ctx context.Context) *User {
 	return node
 }
 
-// OnlyID is like Only, but returns the only User ID in the query.
-// Returns a *NotSingularError when more than one User ID is found.
+// OnlyID is like Only, but returns the only UserConfig ID in the query.
+// Returns a *NotSingularError when more than one UserConfig ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (_q *UserQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *UserConfigQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
 	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
@@ -216,15 +217,15 @@ func (_q *UserQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	case 1:
 		id = ids[0]
 	case 0:
-		err = &NotFoundError{user.Label}
+		err = &NotFoundError{userconfig.Label}
 	default:
-		err = &NotSingularError{user.Label}
+		err = &NotSingularError{userconfig.Label}
 	}
 	return
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (_q *UserQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+func (_q *UserConfigQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -232,18 +233,18 @@ func (_q *UserQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	return id
 }
 
-// All executes the query and returns a list of Users.
-func (_q *UserQuery) All(ctx context.Context) ([]*User, error) {
+// All executes the query and returns a list of UserConfigs.
+func (_q *UserConfigQuery) All(ctx context.Context) ([]*UserConfig, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	qr := querierAll[[]*User, *UserQuery]()
-	return withInterceptors[[]*User](ctx, _q, qr, _q.inters)
+	qr := querierAll[[]*UserConfig, *UserConfigQuery]()
+	return withInterceptors[[]*UserConfig](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (_q *UserQuery) AllX(ctx context.Context) []*User {
+func (_q *UserConfigQuery) AllX(ctx context.Context) []*UserConfig {
 	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
@@ -251,20 +252,20 @@ func (_q *UserQuery) AllX(ctx context.Context) []*User {
 	return nodes
 }
 
-// IDs executes the query and returns a list of User IDs.
-func (_q *UserQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+// IDs executes the query and returns a list of UserConfig IDs.
+func (_q *UserConfigQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
 	if _q.ctx.Unique == nil && _q.path != nil {
 		_q.Unique(true)
 	}
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
-	if err = _q.Select(user.FieldID).Scan(ctx, &ids); err != nil {
+	if err = _q.Select(userconfig.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (_q *UserQuery) IDsX(ctx context.Context) []uuid.UUID {
+func (_q *UserConfigQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -273,16 +274,16 @@ func (_q *UserQuery) IDsX(ctx context.Context) []uuid.UUID {
 }
 
 // Count returns the count of the given query.
-func (_q *UserQuery) Count(ctx context.Context) (int, error) {
+func (_q *UserConfigQuery) Count(ctx context.Context) (int, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, _q, querierCount[*UserQuery](), _q.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*UserConfigQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (_q *UserQuery) CountX(ctx context.Context) int {
+func (_q *UserConfigQuery) CountX(ctx context.Context) int {
 	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
@@ -291,7 +292,7 @@ func (_q *UserQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (_q *UserQuery) Exist(ctx context.Context) (bool, error) {
+func (_q *UserConfigQuery) Exist(ctx context.Context) (bool, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
 	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
@@ -304,7 +305,7 @@ func (_q *UserQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (_q *UserQuery) ExistX(ctx context.Context) bool {
+func (_q *UserConfigQuery) ExistX(ctx context.Context) bool {
 	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
@@ -312,57 +313,57 @@ func (_q *UserQuery) ExistX(ctx context.Context) bool {
 	return exist
 }
 
-// Clone returns a duplicate of the UserQuery builder, including all associated steps. It can be
+// Clone returns a duplicate of the UserConfigQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (_q *UserQuery) Clone() *UserQuery {
+func (_q *UserConfigQuery) Clone() *UserConfigQuery {
 	if _q == nil {
 		return nil
 	}
-	return &UserQuery{
+	return &UserConfigQuery{
 		config:            _q.config,
 		ctx:               _q.ctx.Clone(),
-		order:             append([]user.OrderOption{}, _q.order...),
+		order:             append([]userconfig.OrderOption{}, _q.order...),
 		inters:            append([]Interceptor{}, _q.inters...),
-		predicates:        append([]predicate.User{}, _q.predicates...),
-		withAuthMethods:   _q.withAuthMethods.Clone(),
-		withConfigs:       _q.withConfigs.Clone(),
-		withExportRecords: _q.withExportRecords.Clone(),
+		predicates:        append([]predicate.UserConfig{}, _q.predicates...),
+		withUser:          _q.withUser.Clone(),
+		withAnonymousUser: _q.withAnonymousUser.Clone(),
+		withHistory:       _q.withHistory.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
 }
 
-// WithAuthMethods tells the query-builder to eager-load the nodes that are connected to
-// the "auth_methods" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *UserQuery) WithAuthMethods(opts ...func(*UserAuthQuery)) *UserQuery {
-	query := (&UserAuthClient{config: _q.config}).Query()
+// WithUser tells the query-builder to eager-load the nodes that are connected to
+// the "user" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserConfigQuery) WithUser(opts ...func(*UserQuery)) *UserConfigQuery {
+	query := (&UserClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withAuthMethods = query
+	_q.withUser = query
 	return _q
 }
 
-// WithConfigs tells the query-builder to eager-load the nodes that are connected to
-// the "configs" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *UserQuery) WithConfigs(opts ...func(*UserConfigQuery)) *UserQuery {
-	query := (&UserConfigClient{config: _q.config}).Query()
+// WithAnonymousUser tells the query-builder to eager-load the nodes that are connected to
+// the "anonymous_user" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserConfigQuery) WithAnonymousUser(opts ...func(*AnonymousUserQuery)) *UserConfigQuery {
+	query := (&AnonymousUserClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withConfigs = query
+	_q.withAnonymousUser = query
 	return _q
 }
 
-// WithExportRecords tells the query-builder to eager-load the nodes that are connected to
-// the "export_records" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *UserQuery) WithExportRecords(opts ...func(*ExportRecordQuery)) *UserQuery {
-	query := (&ExportRecordClient{config: _q.config}).Query()
+// WithHistory tells the query-builder to eager-load the nodes that are connected to
+// the "history" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserConfigQuery) WithHistory(opts ...func(*ConfigHistoryQuery)) *UserConfigQuery {
+	query := (&ConfigHistoryClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withExportRecords = query
+	_q.withHistory = query
 	return _q
 }
 
@@ -372,19 +373,19 @@ func (_q *UserQuery) WithExportRecords(opts ...func(*ExportRecordQuery)) *UserQu
 // Example:
 //
 //	var v []struct {
-//		Username string `json:"username,omitempty"`
+//		Name string `json:"name,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
-//	client.User.Query().
-//		GroupBy(user.FieldUsername).
+//	client.UserConfig.Query().
+//		GroupBy(userconfig.FieldName).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (_q *UserQuery) GroupBy(field string, fields ...string) *UserGroupBy {
+func (_q *UserConfigQuery) GroupBy(field string, fields ...string) *UserConfigGroupBy {
 	_q.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &UserGroupBy{build: _q}
+	grbuild := &UserConfigGroupBy{build: _q}
 	grbuild.flds = &_q.ctx.Fields
-	grbuild.label = user.Label
+	grbuild.label = userconfig.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
 }
@@ -395,26 +396,26 @@ func (_q *UserQuery) GroupBy(field string, fields ...string) *UserGroupBy {
 // Example:
 //
 //	var v []struct {
-//		Username string `json:"username,omitempty"`
+//		Name string `json:"name,omitempty"`
 //	}
 //
-//	client.User.Query().
-//		Select(user.FieldUsername).
+//	client.UserConfig.Query().
+//		Select(userconfig.FieldName).
 //		Scan(ctx, &v)
-func (_q *UserQuery) Select(fields ...string) *UserSelect {
+func (_q *UserConfigQuery) Select(fields ...string) *UserConfigSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
-	sbuild := &UserSelect{UserQuery: _q}
-	sbuild.label = user.Label
+	sbuild := &UserConfigSelect{UserConfigQuery: _q}
+	sbuild.label = userconfig.Label
 	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
-// Aggregate returns a UserSelect configured with the given aggregations.
-func (_q *UserQuery) Aggregate(fns ...AggregateFunc) *UserSelect {
+// Aggregate returns a UserConfigSelect configured with the given aggregations.
+func (_q *UserConfigQuery) Aggregate(fns ...AggregateFunc) *UserConfigSelect {
 	return _q.Select().Aggregate(fns...)
 }
 
-func (_q *UserQuery) prepareQuery(ctx context.Context) error {
+func (_q *UserConfigQuery) prepareQuery(ctx context.Context) error {
 	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
@@ -426,7 +427,7 @@ func (_q *UserQuery) prepareQuery(ctx context.Context) error {
 		}
 	}
 	for _, f := range _q.ctx.Fields {
-		if !user.ValidColumn(f) {
+		if !userconfig.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
@@ -440,21 +441,28 @@ func (_q *UserQuery) prepareQuery(ctx context.Context) error {
 	return nil
 }
 
-func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, error) {
+func (_q *UserConfigQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*UserConfig, error) {
 	var (
-		nodes       = []*User{}
+		nodes       = []*UserConfig{}
+		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
 		loadedTypes = [3]bool{
-			_q.withAuthMethods != nil,
-			_q.withConfigs != nil,
-			_q.withExportRecords != nil,
+			_q.withUser != nil,
+			_q.withAnonymousUser != nil,
+			_q.withHistory != nil,
 		}
 	)
+	if _q.withUser != nil || _q.withAnonymousUser != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, userconfig.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
-		return (*User).scanValues(nil, columns)
+		return (*UserConfig).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &User{config: _q.config}
+		node := &UserConfig{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -468,95 +476,95 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := _q.withAuthMethods; query != nil {
-		if err := _q.loadAuthMethods(ctx, query, nodes,
-			func(n *User) { n.Edges.AuthMethods = []*UserAuth{} },
-			func(n *User, e *UserAuth) { n.Edges.AuthMethods = append(n.Edges.AuthMethods, e) }); err != nil {
+	if query := _q.withUser; query != nil {
+		if err := _q.loadUser(ctx, query, nodes, nil,
+			func(n *UserConfig, e *User) { n.Edges.User = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := _q.withConfigs; query != nil {
-		if err := _q.loadConfigs(ctx, query, nodes,
-			func(n *User) { n.Edges.Configs = []*UserConfig{} },
-			func(n *User, e *UserConfig) { n.Edges.Configs = append(n.Edges.Configs, e) }); err != nil {
+	if query := _q.withAnonymousUser; query != nil {
+		if err := _q.loadAnonymousUser(ctx, query, nodes, nil,
+			func(n *UserConfig, e *AnonymousUser) { n.Edges.AnonymousUser = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := _q.withExportRecords; query != nil {
-		if err := _q.loadExportRecords(ctx, query, nodes,
-			func(n *User) { n.Edges.ExportRecords = []*ExportRecord{} },
-			func(n *User, e *ExportRecord) { n.Edges.ExportRecords = append(n.Edges.ExportRecords, e) }); err != nil {
+	if query := _q.withHistory; query != nil {
+		if err := _q.loadHistory(ctx, query, nodes,
+			func(n *UserConfig) { n.Edges.History = []*ConfigHistory{} },
+			func(n *UserConfig, e *ConfigHistory) { n.Edges.History = append(n.Edges.History, e) }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (_q *UserQuery) loadAuthMethods(ctx context.Context, query *UserAuthQuery, nodes []*User, init func(*User), assign func(*User, *UserAuth)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*User)
+func (_q *UserConfigQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*UserConfig, init func(*UserConfig), assign func(*UserConfig, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*UserConfig)
 	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
+		if nodes[i].user_configs == nil {
+			continue
 		}
+		fk := *nodes[i].user_configs
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	query.withFKs = true
-	query.Where(predicate.UserAuth(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(user.AuthMethodsColumn), fks...))
-	}))
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.user_auth_methods
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "user_auth_methods" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "user_auth_methods" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "user_configs" returned %v`, n.ID)
 		}
-		assign(node, n)
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
 	}
 	return nil
 }
-func (_q *UserQuery) loadConfigs(ctx context.Context, query *UserConfigQuery, nodes []*User, init func(*User), assign func(*User, *UserConfig)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*User)
+func (_q *UserConfigQuery) loadAnonymousUser(ctx context.Context, query *AnonymousUserQuery, nodes []*UserConfig, init func(*UserConfig), assign func(*UserConfig, *AnonymousUser)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*UserConfig)
 	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
+		if nodes[i].anonymous_user_configs == nil {
+			continue
 		}
+		fk := *nodes[i].anonymous_user_configs
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	query.withFKs = true
-	query.Where(predicate.UserConfig(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(user.ConfigsColumn), fks...))
-	}))
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(anonymoususer.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.user_configs
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "user_configs" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "user_configs" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "anonymous_user_configs" returned %v`, n.ID)
 		}
-		assign(node, n)
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
 	}
 	return nil
 }
-func (_q *UserQuery) loadExportRecords(ctx context.Context, query *ExportRecordQuery, nodes []*User, init func(*User), assign func(*User, *ExportRecord)) error {
+func (_q *UserConfigQuery) loadHistory(ctx context.Context, query *ConfigHistoryQuery, nodes []*UserConfig, init func(*UserConfig), assign func(*UserConfig, *ConfigHistory)) error {
 	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*User)
+	nodeids := make(map[uuid.UUID]*UserConfig)
 	for i := range nodes {
 		fks = append(fks, nodes[i].ID)
 		nodeids[nodes[i].ID] = nodes[i]
@@ -565,28 +573,28 @@ func (_q *UserQuery) loadExportRecords(ctx context.Context, query *ExportRecordQ
 		}
 	}
 	query.withFKs = true
-	query.Where(predicate.ExportRecord(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(user.ExportRecordsColumn), fks...))
+	query.Where(predicate.ConfigHistory(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(userconfig.HistoryColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.user_export_records
+		fk := n.user_config_history
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "user_export_records" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "user_config_history" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "user_export_records" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "user_config_history" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
 
-func (_q *UserQuery) sqlCount(ctx context.Context) (int, error) {
+func (_q *UserConfigQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
 	_spec.Node.Columns = _q.ctx.Fields
 	if len(_q.ctx.Fields) > 0 {
@@ -595,8 +603,8 @@ func (_q *UserQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (_q *UserQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(user.Table, user.Columns, sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID))
+func (_q *UserConfigQuery) querySpec() *sqlgraph.QuerySpec {
+	_spec := sqlgraph.NewQuerySpec(userconfig.Table, userconfig.Columns, sqlgraph.NewFieldSpec(userconfig.FieldID, field.TypeUUID))
 	_spec.From = _q.sql
 	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
@@ -605,9 +613,9 @@ func (_q *UserQuery) querySpec() *sqlgraph.QuerySpec {
 	}
 	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
-		_spec.Node.Columns = append(_spec.Node.Columns, user.FieldID)
+		_spec.Node.Columns = append(_spec.Node.Columns, userconfig.FieldID)
 		for i := range fields {
-			if fields[i] != user.FieldID {
+			if fields[i] != userconfig.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
 		}
@@ -635,12 +643,12 @@ func (_q *UserQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (_q *UserQuery) sqlQuery(ctx context.Context) *sql.Selector {
+func (_q *UserConfigQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(_q.driver.Dialect())
-	t1 := builder.Table(user.Table)
+	t1 := builder.Table(userconfig.Table)
 	columns := _q.ctx.Fields
 	if len(columns) == 0 {
-		columns = user.Columns
+		columns = userconfig.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
 	if _q.sql != nil {
@@ -667,28 +675,28 @@ func (_q *UserQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	return selector
 }
 
-// UserGroupBy is the group-by builder for User entities.
-type UserGroupBy struct {
+// UserConfigGroupBy is the group-by builder for UserConfig entities.
+type UserConfigGroupBy struct {
 	selector
-	build *UserQuery
+	build *UserConfigQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (_g *UserGroupBy) Aggregate(fns ...AggregateFunc) *UserGroupBy {
+func (_g *UserConfigGroupBy) Aggregate(fns ...AggregateFunc) *UserConfigGroupBy {
 	_g.fns = append(_g.fns, fns...)
 	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_g *UserGroupBy) Scan(ctx context.Context, v any) error {
+func (_g *UserConfigGroupBy) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
 	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*UserQuery, *UserGroupBy](ctx, _g.build, _g, _g.build.inters, v)
+	return scanWithInterceptors[*UserConfigQuery, *UserConfigGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (_g *UserGroupBy) sqlScan(ctx context.Context, root *UserQuery, v any) error {
+func (_g *UserConfigGroupBy) sqlScan(ctx context.Context, root *UserConfigQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
 	aggregation := make([]string, 0, len(_g.fns))
 	for _, fn := range _g.fns {
@@ -715,28 +723,28 @@ func (_g *UserGroupBy) sqlScan(ctx context.Context, root *UserQuery, v any) erro
 	return sql.ScanSlice(rows, v)
 }
 
-// UserSelect is the builder for selecting fields of User entities.
-type UserSelect struct {
-	*UserQuery
+// UserConfigSelect is the builder for selecting fields of UserConfig entities.
+type UserConfigSelect struct {
+	*UserConfigQuery
 	selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (_s *UserSelect) Aggregate(fns ...AggregateFunc) *UserSelect {
+func (_s *UserConfigSelect) Aggregate(fns ...AggregateFunc) *UserConfigSelect {
 	_s.fns = append(_s.fns, fns...)
 	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (_s *UserSelect) Scan(ctx context.Context, v any) error {
+func (_s *UserConfigSelect) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
 	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*UserQuery, *UserSelect](ctx, _s.UserQuery, _s, _s.inters, v)
+	return scanWithInterceptors[*UserConfigQuery, *UserConfigSelect](ctx, _s.UserConfigQuery, _s, _s.inters, v)
 }
 
-func (_s *UserSelect) sqlScan(ctx context.Context, root *UserQuery, v any) error {
+func (_s *UserConfigSelect) sqlScan(ctx context.Context, root *UserConfigQuery, v any) error {
 	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(_s.fns))
 	for _, fn := range _s.fns {

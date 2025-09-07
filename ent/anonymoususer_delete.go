@@ -4,7 +4,7 @@ package ent
 
 import (
 	"context"
-	"fiber-ent-apollo-pg/ent/post"
+	"fiber-ent-apollo-pg/ent/anonymoususer"
 	"fiber-ent-apollo-pg/ent/predicate"
 
 	"entgo.io/ent/dialect/sql"
@@ -12,26 +12,26 @@ import (
 	"entgo.io/ent/schema/field"
 )
 
-// PostDelete is the builder for deleting a Post entity.
-type PostDelete struct {
+// AnonymousUserDelete is the builder for deleting a AnonymousUser entity.
+type AnonymousUserDelete struct {
 	config
 	hooks    []Hook
-	mutation *PostMutation
+	mutation *AnonymousUserMutation
 }
 
-// Where appends a list predicates to the PostDelete builder.
-func (_d *PostDelete) Where(ps ...predicate.Post) *PostDelete {
+// Where appends a list predicates to the AnonymousUserDelete builder.
+func (_d *AnonymousUserDelete) Where(ps ...predicate.AnonymousUser) *AnonymousUserDelete {
 	_d.mutation.Where(ps...)
 	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (_d *PostDelete) Exec(ctx context.Context) (int, error) {
+func (_d *AnonymousUserDelete) Exec(ctx context.Context) (int, error) {
 	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (_d *PostDelete) ExecX(ctx context.Context) int {
+func (_d *AnonymousUserDelete) ExecX(ctx context.Context) int {
 	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
@@ -39,8 +39,8 @@ func (_d *PostDelete) ExecX(ctx context.Context) int {
 	return n
 }
 
-func (_d *PostDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := sqlgraph.NewDeleteSpec(post.Table, sqlgraph.NewFieldSpec(post.FieldID, field.TypeInt))
+func (_d *AnonymousUserDelete) sqlExec(ctx context.Context) (int, error) {
+	_spec := sqlgraph.NewDeleteSpec(anonymoususer.Table, sqlgraph.NewFieldSpec(anonymoususer.FieldID, field.TypeUUID))
 	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -56,32 +56,32 @@ func (_d *PostDelete) sqlExec(ctx context.Context) (int, error) {
 	return affected, err
 }
 
-// PostDeleteOne is the builder for deleting a single Post entity.
-type PostDeleteOne struct {
-	_d *PostDelete
+// AnonymousUserDeleteOne is the builder for deleting a single AnonymousUser entity.
+type AnonymousUserDeleteOne struct {
+	_d *AnonymousUserDelete
 }
 
-// Where appends a list predicates to the PostDelete builder.
-func (_d *PostDeleteOne) Where(ps ...predicate.Post) *PostDeleteOne {
+// Where appends a list predicates to the AnonymousUserDelete builder.
+func (_d *AnonymousUserDeleteOne) Where(ps ...predicate.AnonymousUser) *AnonymousUserDeleteOne {
 	_d._d.mutation.Where(ps...)
 	return _d
 }
 
 // Exec executes the deletion query.
-func (_d *PostDeleteOne) Exec(ctx context.Context) error {
+func (_d *AnonymousUserDeleteOne) Exec(ctx context.Context) error {
 	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
 	case n == 0:
-		return &NotFoundError{post.Label}
+		return &NotFoundError{anonymoususer.Label}
 	default:
 		return nil
 	}
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (_d *PostDeleteOne) ExecX(ctx context.Context) {
+func (_d *AnonymousUserDeleteOne) ExecX(ctx context.Context) {
 	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}

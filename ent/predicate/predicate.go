@@ -6,8 +6,20 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
-// Post is the predicate function for post builders.
-type Post func(*sql.Selector)
+// AnonymousUser is the predicate function for anonymoususer builders.
+type AnonymousUser func(*sql.Selector)
+
+// ConfigHistory is the predicate function for confighistory builders.
+type ConfigHistory func(*sql.Selector)
+
+// ExportRecord is the predicate function for exportrecord builders.
+type ExportRecord func(*sql.Selector)
 
 // User is the predicate function for user builders.
 type User func(*sql.Selector)
+
+// UserAuth is the predicate function for userauth builders.
+type UserAuth func(*sql.Selector)
+
+// UserConfig is the predicate function for userconfig builders.
+type UserConfig func(*sql.Selector)
