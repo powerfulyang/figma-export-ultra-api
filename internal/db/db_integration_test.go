@@ -71,15 +71,18 @@ func Test_Open_With_PostgresContainer(t *testing.T) {
 
 	// 测试创建用户
 	user, err := c.User.Create().
-		SetName("test_user").
+		SetUsername("test_user").
+		SetIsActive(true).
+		SetCreatedAt(time.Now()).
+		SetUpdatedAt(time.Now()).
 		Save(ctx2)
 	if err != nil {
 		t.Fatalf("create user: %v", err)
 	}
 
 	// 验证用户创建成功
-	if user.Name != "test_user" {
-		t.Errorf("expected user name 'test_user', got '%s'", user.Name)
+	if user.Username != "test_user" {
+		t.Errorf("expected user name 'test_user', got '%s'", user.Username)
 	}
 
 	// 测试查询用户

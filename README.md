@@ -49,9 +49,10 @@ go run ./cmd/server
 ```
 
 启动后可访问：
+- **Swagger 文档**：`GET http://localhost:8080/swagger/index.html` （API 接口文档，支持在线测试）
 - 健康检查：`GET http://localhost:8080/health`
-- 用户列表：`GET http://localhost:8080/users`
-- 创建用户：`POST http://localhost:8080/users`，Body: `{ "name": "Alice" }`
+- 用户列表：`GET http://localhost:8080/api/v1/users`
+- 创建用户：`POST http://localhost:8080/api/v1/users`，Body: `{ "username": "Alice" }`
 - 文章列表：`GET http://localhost:8080/posts?limit=20&offset=0`
 - 创建文章：`POST http://localhost:8080/posts`，Body: `{ "title": "Hello", "content": "...", "user_id": 1 }`
  - 搜索文章（ES）：`GET http://localhost:8080/search/posts?q=hello&limit=20&offset=0`
@@ -60,12 +61,56 @@ go run ./cmd/server
 - 健康检查
   - `curl -s http://localhost:8080/health`
 - 创建用户并列出
-  - `curl -s -X POST http://localhost:8080/users -H "Content-Type: application/json" -d '{"name":"alice"}'`
-  - `curl -s "http://localhost:8080/users?limit=10&offset=0&sort=created_at:desc"`
+  - `curl -s -X POST http://localhost:8080/api/v1/users -H "Content-Type: application/json" -d '{"username":"alice"}'`
+  - `curl -s "http://localhost:8080/api/v1/users?limit=10&offset=0&sort=created_at:desc"`
 - 创建文章并列表（需替换 user_id）
   - `curl -s -X POST http://localhost:8080/posts -H "Content-Type: application/json" -d '{"title":"hello","content":"world","user_id":1}'`
   - `curl -s "http://localhost:8080/posts?limit=10&offset=0&sort=created_at:desc"`
   - 光标模式：`curl -s "http://localhost:8080/posts?mode=cursor&sort=id:asc&limit=10"`
+
+### Swagger API 文档
+
+项目已集成 Swagger 支持，提供完整的 API 文档和在线测试功能。
+
+#### 访问文档
+
+启动服务后，访问：http://localhost:8080/swagger/index.html
+
+#### 功能特点
+
+- **完整的 API 文档**：自动生成的接口文档，包含所有端点的详细说明
+- **在线测试**：可以直接在浏览器中测试 API 接口
+- **参数说明**：详细的请求参数、响应格式说明
+- **示例数据**：提供请求和响应的示例数据
+
+#### 文档更新
+
+当你修改 API 相关的注释后，需要重新生成文档：
+
+```bash
+go run github.com/swaggo/swag/cmd/swag@latest init -g cmd/server/main.go -o ./docs
+```
+
+#### 添加新的 API 注释
+
+为新的 API 处理器添加 Swagger 注释示例：
+
+```go
+// CreateUserHandler 创建用户处理器
+//	@Summary		创建新用户
+//	@Description	创建一个新的用户
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			user	body		map[string]string	true	"用户信息"	example({"username": "john_doe"})
+//	@Success		201		{object}	map[string]interface{}	"创建成功"
+//	@Failure		400		{object}	map[string]interface{}	"请求参数错误"
+//	@Failure		500		{object}	map[string]interface{}	"内部服务器错误"
+//	@Router			/api/v1/users [post]
+func CreateUserHandler(client *ent.Client) fiber.Handler {
+    // 实现代码...
+}
+```
 
 ### Apollo 配置中心
 
@@ -87,6 +132,10 @@ go run ./cmd/server
 ```
 fiber-ent-apollo-pg/
 ├── cmd/server/main.go         # 入口
+├── docs/                      # Swagger 文档（自动生成）
+│   ├── docs.go                # Swagger 文档定义
+│   ├── swagger.json           # OpenAPI JSON 规范
+│   └── swagger.yaml           # OpenAPI YAML 规范
 ├── internal/
 │   ├── config/                # 配置加载（env + Apollo）
 │   │   ├── store.go           # 运行时配置存储与监听
@@ -116,6 +165,9 @@ fiber-ent-apollo-pg/
 ```bash
 # 生成 Ent 代码（修改 schema 后执行）
 go generate ./...
+
+# 生成 Swagger 文档（修改 API 注释后执行）
+go run github.com/swaggo/swag/cmd/swag@latest init -g cmd/server/main.go -o ./docs
 
 # 整体运行
 go run ./cmd/server

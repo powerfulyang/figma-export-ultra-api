@@ -12,6 +12,24 @@ import (
 )
 
 // GetUsersHandler 获取用户列表处理器
+//
+//	@Summary		获取用户列表
+//	@Description	支持分页、排序和筛选的用户列表查询
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			name		query		string	false	"用户名筛选"
+//	@Param			limit		query		int		false	"每页数量"	default(20)
+//	@Param			offset		query		int		false	"偏移量"	default(0)
+//	@Param			sort		query		string	false	"排序字段"
+//	@Param			mode		query		string	false	"分页模式: offset, cursor, snapshot"	default(offset)
+//	@Param			cursor		query		string	false	"游标位置（cursor模式）"
+//	@Param			snapshot	query		string	false	"快照时间（snapshot模式）"
+//	@Param			with_total	query		bool	false	"是否返回总数"	default(false)
+//	@Success		200			{object}	map[string]interface{}	"用户列表"
+//	@Failure		400			{object}	map[string]interface{}	"请求参数错误"
+//	@Failure		500			{object}	map[string]interface{}	"内部服务器错误"
+//	@Router			/api/v1/users [get]
 func GetUsersHandler(client *ent.Client) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx, cancel := context.WithTimeout(c.Context(), 3*time.Second)
@@ -76,6 +94,17 @@ func GetUsersHandler(client *ent.Client) fiber.Handler {
 }
 
 // CreateUserHandler 创建用户处理器
+//
+//	@Summary		创建新用户
+//	@Description	创建一个新的用户
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			user	body		map[string]string	true	"用户信息"	example({"username": "john_doe"})
+//	@Success		201		{object}	map[string]interface{}	"创建成功"
+//	@Failure		400		{object}	map[string]interface{}	"请求参数错误"
+//	@Failure		500		{object}	map[string]interface{}	"内部服务器错误"
+//	@Router			/api/v1/users [post]
 func CreateUserHandler(client *ent.Client) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var body struct {

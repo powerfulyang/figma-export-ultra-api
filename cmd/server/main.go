@@ -1,4 +1,22 @@
 // Package main is the entry point for the API server
+//
+//	@title			Figma Export Ultra API
+//	@version		1.0
+//	@description	这是一个用于 Figma 数据导出的 API 服务
+//	@termsOfService	http://swagger.io/terms/
+//
+//	@contact.name	API Support
+//	@contact.url	http://www.swagger.io/support
+//	@contact.email	support@swagger.io
+//
+//	@license.name	Apache 2.0
+//	@license.url	http://www.apache.org/licenses/LICENSE-2.0.html
+//
+//	@host		localhost:8080
+//	@BasePath	/api/v1
+//
+//	@externalDocs.description	OpenAPI
+//	@externalDocs.url			https://swagger.io/resources/open-api/
 package main
 
 import (
@@ -20,6 +38,8 @@ import (
 	"fiber-ent-apollo-pg/internal/mqx"
 	"fiber-ent-apollo-pg/internal/redisx"
 	"fiber-ent-apollo-pg/internal/server"
+
+	_ "fiber-ent-apollo-pg/docs" // swagger docs
 )
 
 func main() {

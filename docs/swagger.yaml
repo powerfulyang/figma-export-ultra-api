@@ -1,0 +1,133 @@
+basePath: /api/v1
+externalDocs:
+  description: OpenAPI
+  url: https://swagger.io/resources/open-api/
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: 这是一个用于 Figma 数据导出的 API 服务
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Figma Export Ultra API
+  version: "1.0"
+paths:
+  /api/v1/users:
+    get:
+      consumes:
+      - application/json
+      description: 支持分页、排序和筛选的用户列表查询
+      parameters:
+      - description: 用户名筛选
+        in: query
+        name: name
+        type: string
+      - default: 20
+        description: 每页数量
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量
+        in: query
+        name: offset
+        type: integer
+      - description: 排序字段
+        in: query
+        name: sort
+        type: string
+      - default: offset
+        description: '分页模式: offset, cursor, snapshot'
+        in: query
+        name: mode
+        type: string
+      - description: 游标位置（cursor模式）
+        in: query
+        name: cursor
+        type: string
+      - description: 快照时间（snapshot模式）
+        in: query
+        name: snapshot
+        type: string
+      - default: false
+        description: 是否返回总数
+        in: query
+        name: with_total
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户列表
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 内部服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取用户列表
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: 创建一个新的用户
+      parameters:
+      - description: 用户信息
+        in: body
+        name: user
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 创建成功
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 内部服务器错误
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 创建新用户
+      tags:
+      - users
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: 检查API服务的健康状态
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 服务健康
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 健康检查
+      tags:
+      - health
+swagger: "2.0"
