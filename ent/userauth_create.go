@@ -184,6 +184,14 @@ func (_c *UserAuthCreate) SetCreatedAt(v time.Time) *UserAuthCreate {
 	return _c
 }
 
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (_c *UserAuthCreate) SetNillableCreatedAt(v *time.Time) *UserAuthCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
+	}
+	return _c
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_c *UserAuthCreate) SetUpdatedAt(v time.Time) *UserAuthCreate {
 	_c.mutation.SetUpdatedAt(v)
@@ -250,6 +258,10 @@ func (_c *UserAuthCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *UserAuthCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
+		v := userauth.DefaultCreatedAt()
+		_c.mutation.SetCreatedAt(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := userauth.DefaultID()
 		_c.mutation.SetID(v)

@@ -85,6 +85,12 @@ func ValidColumn(column string) bool {
 var (
 	// BrowserFingerprintValidator is a validator for the "browser_fingerprint" field. It is called by the builders before save.
 	BrowserFingerprintValidator func(string) error
+	// DefaultIsActive holds the default value on creation for the "is_active" field.
+	DefaultIsActive bool
+	// DefaultLastActivityAt holds the default value on creation for the "last_activity_at" field.
+	DefaultLastActivityAt time.Time
+	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
+	DefaultCreatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
 	UpdateDefaultUpdatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.

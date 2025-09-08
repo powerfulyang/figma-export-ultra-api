@@ -105,15 +105,39 @@ func (_c *AnonymousUserCreate) SetIsActive(v bool) *AnonymousUserCreate {
 	return _c
 }
 
+// SetNillableIsActive sets the "is_active" field if the given value is not nil.
+func (_c *AnonymousUserCreate) SetNillableIsActive(v *bool) *AnonymousUserCreate {
+	if v != nil {
+		_c.SetIsActive(*v)
+	}
+	return _c
+}
+
 // SetLastActivityAt sets the "last_activity_at" field.
 func (_c *AnonymousUserCreate) SetLastActivityAt(v time.Time) *AnonymousUserCreate {
 	_c.mutation.SetLastActivityAt(v)
 	return _c
 }
 
+// SetNillableLastActivityAt sets the "last_activity_at" field if the given value is not nil.
+func (_c *AnonymousUserCreate) SetNillableLastActivityAt(v *time.Time) *AnonymousUserCreate {
+	if v != nil {
+		_c.SetLastActivityAt(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *AnonymousUserCreate) SetCreatedAt(v time.Time) *AnonymousUserCreate {
 	_c.mutation.SetCreatedAt(v)
+	return _c
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (_c *AnonymousUserCreate) SetNillableCreatedAt(v *time.Time) *AnonymousUserCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
+	}
 	return _c
 }
 
@@ -202,6 +226,18 @@ func (_c *AnonymousUserCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *AnonymousUserCreate) defaults() {
+	if _, ok := _c.mutation.IsActive(); !ok {
+		v := anonymoususer.DefaultIsActive
+		_c.mutation.SetIsActive(v)
+	}
+	if _, ok := _c.mutation.LastActivityAt(); !ok {
+		v := anonymoususer.DefaultLastActivityAt
+		_c.mutation.SetLastActivityAt(v)
+	}
+	if _, ok := _c.mutation.CreatedAt(); !ok {
+		v := anonymoususer.DefaultCreatedAt()
+		_c.mutation.SetCreatedAt(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := anonymoususer.DefaultID()
 		_c.mutation.SetID(v)

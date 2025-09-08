@@ -203,6 +203,14 @@ func (_c *ExportRecordCreate) SetCreatedAt(v time.Time) *ExportRecordCreate {
 	return _c
 }
 
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (_c *ExportRecordCreate) SetNillableCreatedAt(v *time.Time) *ExportRecordCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
+	}
+	return _c
+}
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_c *ExportRecordCreate) SetUpdatedAt(v time.Time) *ExportRecordCreate {
 	_c.mutation.SetUpdatedAt(v)
@@ -296,6 +304,10 @@ func (_c *ExportRecordCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *ExportRecordCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
+		v := exportrecord.DefaultCreatedAt()
+		_c.mutation.SetCreatedAt(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := exportrecord.DefaultID()
 		_c.mutation.SetID(v)

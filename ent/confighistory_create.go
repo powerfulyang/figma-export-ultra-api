@@ -108,6 +108,14 @@ func (_c *ConfigHistoryCreate) SetCreatedAt(v time.Time) *ConfigHistoryCreate {
 	return _c
 }
 
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (_c *ConfigHistoryCreate) SetNillableCreatedAt(v *time.Time) *ConfigHistoryCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *ConfigHistoryCreate) SetID(v uuid.UUID) *ConfigHistoryCreate {
 	_c.mutation.SetID(v)
@@ -168,6 +176,10 @@ func (_c *ConfigHistoryCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *ConfigHistoryCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
+		v := confighistory.DefaultCreatedAt()
+		_c.mutation.SetCreatedAt(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := confighistory.DefaultID()
 		_c.mutation.SetID(v)

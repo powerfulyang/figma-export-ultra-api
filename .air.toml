@@ -5,8 +5,8 @@ tmp_dir = "tmp"
 [build]
 # Generate ent code before building to reflect schema changes
 pre_cmd = ["go generate ./ent"]
-cmd = "go build -o ./tmp/server ./cmd/server"
-bin = "./tmp/server"
+cmd = "go build -o ./tmp/server.exe ./cmd/server"
+bin = "./tmp/server.exe"
 full_bin = ""
 include_ext = ["go", "mod", "sum", "env", "yaml", "yml"]
 exclude_dir = ["tmp", "bin", "deploy", ".git", "vendor"]

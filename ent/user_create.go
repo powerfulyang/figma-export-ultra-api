@@ -120,6 +120,14 @@ func (_c *UserCreate) SetIsActive(v bool) *UserCreate {
 	return _c
 }
 
+// SetNillableIsActive sets the "is_active" field if the given value is not nil.
+func (_c *UserCreate) SetNillableIsActive(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetIsActive(*v)
+	}
+	return _c
+}
+
 // SetLastLoginAt sets the "last_login_at" field.
 func (_c *UserCreate) SetLastLoginAt(v time.Time) *UserCreate {
 	_c.mutation.SetLastLoginAt(v)
@@ -137,6 +145,14 @@ func (_c *UserCreate) SetNillableLastLoginAt(v *time.Time) *UserCreate {
 // SetCreatedAt sets the "created_at" field.
 func (_c *UserCreate) SetCreatedAt(v time.Time) *UserCreate {
 	_c.mutation.SetCreatedAt(v)
+	return _c
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (_c *UserCreate) SetNillableCreatedAt(v *time.Time) *UserCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
+	}
 	return _c
 }
 
@@ -240,6 +256,14 @@ func (_c *UserCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *UserCreate) defaults() {
+	if _, ok := _c.mutation.IsActive(); !ok {
+		v := user.DefaultIsActive
+		_c.mutation.SetIsActive(v)
+	}
+	if _, ok := _c.mutation.CreatedAt(); !ok {
+		v := user.DefaultCreatedAt()
+		_c.mutation.SetCreatedAt(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := user.DefaultID()
 		_c.mutation.SetID(v)

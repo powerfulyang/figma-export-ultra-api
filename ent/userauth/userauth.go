@@ -106,6 +106,8 @@ func ValidColumn(column string) bool {
 var (
 	// IdentifierValidator is a validator for the "identifier" field. It is called by the builders before save.
 	IdentifierValidator func(string) error
+	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
+	DefaultCreatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
 	UpdateDefaultUpdatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.

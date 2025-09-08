@@ -146,7 +146,7 @@ fiber-ent-apollo-pg/
 │       ├── paging.go          # 通用分页解析/编码游标
 │       ├── sort.go            # 排序白名单映射
 │
-├── internal/logx/             # 统一日志（基于 slog）
+├── internal/logx/             # 统一日志（基于 zap，支持结构化日志和环境自适应）
 ├── internal/redisx/           # Redis 客户端
 ├── internal/mqx/              # MQ（RabbitMQ）发布端
 ├── internal/esx/              # Elasticsearch 客户端与搜索/索引示例

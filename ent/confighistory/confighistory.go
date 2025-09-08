@@ -3,6 +3,8 @@
 package confighistory
 
 import (
+	"time"
+
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
@@ -84,6 +86,8 @@ var (
 	ChangeTypeValidator func(string) error
 	// NewVersionValidator is a validator for the "new_version" field. It is called by the builders before save.
 	NewVersionValidator func(string) error
+	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
+	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
