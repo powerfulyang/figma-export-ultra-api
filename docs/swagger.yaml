@@ -1,7 +1,86 @@
 basePath: /api/v1
-externalDocs:
-  description: OpenAPI
-  url: https://swagger.io/resources/open-api/
+definitions:
+  auth.AnonymousInitRequest:
+    properties:
+      device_id:
+        example: web-uuid-123
+        type: string
+      fp_hash:
+        example: sha256:abcdef...
+        type: string
+      meta:
+        additionalProperties: {}
+        type: object
+    type: object
+  auth.FpSyncRequest:
+    properties:
+      device_id:
+        example: web-uuid-123
+        type: string
+      fp_hash:
+        example: sha256:abcdef...
+        type: string
+      ip_hash:
+        example: sha256:ip...
+        type: string
+      meta:
+        additionalProperties: {}
+        type: object
+      ua_hash:
+        example: sha256:ua...
+        type: string
+    type: object
+  auth.LoginRequest:
+    properties:
+      device_id:
+        example: web-uuid-123
+        type: string
+      identifier:
+        example: alice@example.com
+        type: string
+      password:
+        example: Secretp@ssw0rd
+        type: string
+    type: object
+  auth.RegisterRequest:
+    properties:
+      device_id:
+        example: web-uuid-123
+        type: string
+      display_name:
+        example: Alice
+        type: string
+      identifier:
+        example: alice@example.com
+        type: string
+      password:
+        example: Secretp@ssw0rd
+        type: string
+    type: object
+  auth.TokenResponse:
+    properties:
+      access_token:
+        example: <JWT>
+        type: string
+      anon_id:
+        example: 8a0d1b7c-...
+        type: string
+      device_id:
+        example: web-uuid-123
+        type: string
+      expires_in:
+        example: 900
+        type: integer
+      token_type:
+        example: Bearer
+        type: string
+    type: object
+  users.UserCreateRequest:
+    properties:
+      display_name:
+        example: Alice
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -16,45 +95,391 @@ info:
   title: Figma Export Ultra API
   version: "1.0"
 paths:
+  /api/v1/admin/ping:
+    get:
+      consumes:
+      - application/json
+      description: Protected route requiring admin role
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: pong
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: forbidden
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Admin Ping
+      tags:
+      - admin
+  /api/v1/admin/users/{id}/promote:
+    post:
+      consumes:
+      - application/json
+      description: Set user.type = admin
+      parameters:
+      - description: User UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ok
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Promote user to admin
+      tags:
+      - admin
+  /api/v1/auth/anonymous/init:
+    post:
+      consumes:
+      - application/json
+      description: Initialize anonymous visitor, upsert device, issue tokens
+      parameters:
+      - description: anonymous init
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.AnonymousInitRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-RateLimit-Limit:
+              description: Requests per window
+              type: string
+            X-RateLimit-Remaining:
+              description: Remaining requests
+              type: string
+          schema:
+            $ref: '#/definitions/auth.TokenResponse'
+        "429":
+          description: Too Many Requests
+          headers:
+            Retry-After:
+              description: Seconds to wait
+              type: string
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Anonymous Init
+      tags:
+      - auth
+  /api/v1/auth/fp/sync:
+    post:
+      consumes:
+      - application/json
+      description: Upsert device and fingerprint metadata; bind to current user/visitor
+      parameters:
+      - description: fingerprint/device sync
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.FpSyncRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-RateLimit-Limit:
+              description: Requests per window
+              type: string
+            X-RateLimit-Remaining:
+              description: Remaining requests
+              type: string
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "429":
+          description: Too Many Requests
+          headers:
+            Retry-After:
+              description: Seconds to wait
+              type: string
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Fingerprint/Device Sync
+      tags:
+      - auth
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate by identifier/password and issue tokens
+      parameters:
+      - description: login
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-RateLimit-Limit:
+              description: Requests per window
+              type: string
+            X-RateLimit-Remaining:
+              description: Remaining requests
+              type: string
+          schema:
+            $ref: '#/definitions/auth.TokenResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "429":
+          description: Too Many Requests
+          headers:
+            Retry-After:
+              description: Seconds to wait
+              type: string
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Login (password)
+      tags:
+      - auth
+  /api/v1/auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Clear refresh cookie; access tokens expire naturally
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: no content
+          schema:
+            type: string
+        "429":
+          description: Too Many Requests
+          headers:
+            Retry-After:
+              description: Seconds to wait
+              type: string
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Logout (clear refresh)
+      tags:
+      - auth
+  /api/v1/auth/me:
+    get:
+      consumes:
+      - application/json
+      description: Return current auth context
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-RateLimit-Limit:
+              description: Requests per window
+              type: string
+            X-RateLimit-Remaining:
+              description: Remaining requests
+              type: string
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "429":
+          description: Too Many Requests
+          headers:
+            Retry-After:
+              description: Seconds to wait
+              type: string
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Who am I
+      tags:
+      - auth
+  /api/v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Mint new access token from refresh cookie
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-RateLimit-Limit:
+              description: Requests per window
+              type: string
+            X-RateLimit-Remaining:
+              description: Remaining requests
+              type: string
+          schema:
+            $ref: '#/definitions/auth.TokenResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "429":
+          description: Too Many Requests
+          headers:
+            Retry-After:
+              description: Seconds to wait
+              type: string
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Refresh Access Token
+      tags:
+      - auth
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create user + password identity, then issue tokens
+      parameters:
+      - description: register
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-RateLimit-Limit:
+              description: Requests per window
+              type: string
+            X-RateLimit-Remaining:
+              description: Remaining requests
+              type: string
+          schema:
+            $ref: '#/definitions/auth.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "429":
+          description: Too Many Requests
+          headers:
+            Retry-After:
+              description: Seconds to wait
+              type: string
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Register (password)
+      tags:
+      - auth
   /api/v1/users:
     get:
       consumes:
       - application/json
-      description: 支持分页、排序和筛选的用户列表查询
+      description: Supports paging, sorting, and display_name filter
       parameters:
-      - description: 用户名筛选
+      - description: display_name filter
         in: query
         name: name
         type: string
       - default: 20
-        description: 每页数量
+        description: page size
         in: query
         name: limit
         type: integer
       - default: 0
-        description: 偏移量
+        description: offset
         in: query
         name: offset
         type: integer
-      - description: 排序字段
+      - description: sort field
         in: query
         name: sort
         type: string
       - default: offset
-        description: '分页模式: offset, cursor, snapshot'
+        description: 'paging mode: offset|cursor|snapshot'
         in: query
         name: mode
         type: string
-      - description: 游标位置（cursor模式）
+      - description: cursor value (cursor mode)
         in: query
         name: cursor
         type: string
-      - description: 快照时间（snapshot模式）
+      - description: snapshot time (snapshot mode)
         in: query
         name: snapshot
         type: string
       - default: false
-        description: 是否返回总数
+        description: return total in offset mode
         in: query
         name: with_total
         type: boolean
@@ -62,72 +487,78 @@ paths:
       - application/json
       responses:
         "200":
-          description: 用户列表
+          description: user list
           schema:
             additionalProperties: true
             type: object
         "400":
-          description: 请求参数错误
+          description: bad request
           schema:
             additionalProperties: true
             type: object
         "500":
-          description: 内部服务器错误
+          description: internal error
           schema:
             additionalProperties: true
             type: object
-      summary: 获取用户列表
+      summary: List users
       tags:
       - users
     post:
       consumes:
       - application/json
-      description: 创建一个新的用户
+      description: Create a user with display_name
       parameters:
-      - description: 用户信息
+      - description: '{display_name}'
         in: body
         name: user
         required: true
         schema:
-          additionalProperties:
-            type: string
-          type: object
+          $ref: '#/definitions/users.UserCreateRequest'
       produces:
       - application/json
       responses:
         "201":
-          description: 创建成功
+          description: created
           schema:
             additionalProperties: true
             type: object
         "400":
-          description: 请求参数错误
+          description: bad request
           schema:
             additionalProperties: true
             type: object
         "500":
-          description: 内部服务器错误
+          description: internal error
           schema:
             additionalProperties: true
             type: object
-      summary: 创建新用户
+      summary: Create user
       tags:
       - users
   /health:
     get:
       consumes:
       - application/json
-      description: 检查API服务的健康状态
+      description: API health/liveness probe
       produces:
       - application/json
       responses:
         "200":
-          description: 服务健康
+          description: ok
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: 健康检查
+      summary: Health Check
       tags:
       - health
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

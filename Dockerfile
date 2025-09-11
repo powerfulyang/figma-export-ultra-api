@@ -15,6 +15,9 @@ RUN go mod download
 # 验证依赖完整性
 RUN go mod verify
 
+# 生成
+go generate ./...
+
 # 复制源代码（源代码变化频率高，放在依赖下载之后）
 COPY . .
 

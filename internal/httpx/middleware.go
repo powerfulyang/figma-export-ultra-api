@@ -9,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"go.uber.org/zap"
 
+	"fiber-ent-apollo-pg/internal/httpx/kit"
 	"fiber-ent-apollo-pg/internal/logx"
 )
 
@@ -25,7 +26,7 @@ func RegisterCommonMiddlewares(app *fiber.App) {
 		start := time.Now()
 		err := c.Next()
 		latency := time.Since(start)
-		rid := requestID(c)
+		rid := kit.RequestID(c)
 		httpxLogger.Info("access",
 			zap.String("method", c.Method()),
 			zap.String("path", c.OriginalURL()),

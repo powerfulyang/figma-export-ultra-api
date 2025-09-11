@@ -304,3 +304,6 @@ task restart
     3) 直到 `meta.has_more=false`，快照窗口读取完毕。
   - 也可自行指定 `snapshot=<RFC3339Nano>`，在任意时间点冻结快照。
   - 注意：固定快照模式下排序强制为 `created_at desc, id desc`，过滤条件始终包含 `created_at <= snapshot`；keyset 条件为 `(created_at < cursor_ts) OR (created_at = cursor_ts AND id < cursor)`。
+### PRD Docs
+- anon_id: prd/anon_id.md
+- device: prd/device.md

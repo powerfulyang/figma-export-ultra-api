@@ -1,6 +1,6 @@
 SHELL := /bin/sh
 
-.PHONY: tidy gen run build dev lint test cover test-integration compose-up compose-down
+.PHONY: tidy gen run build dev lint test test-unit cover test-integration compose-up compose-down
 
 tidy:
 	go mod tidy
@@ -22,6 +22,10 @@ lint:
 
 test:
 	go test ./...
+
+# Unit tests focusing on httpx subpackages (exclude e2e tests package)
+test-unit:
+	GO111MODULE=on go test $(shell go list ./internal/httpx/... | grep -v '/tests$$')
 
 cover:
 	go test -coverprofile=coverage.out ./... && go tool cover -func=coverage.out | tail -n 1

@@ -15,6 +15,14 @@
 //	@host		localhost:8080
 //	@BasePath	/api/v1
 //
+//	@schemes		http https
+//
+//	@securityDefinitions.apikey	BearerAuth
+//	@in						header
+//	@name					Authorization
+//
+//	@security			BearerAuth
+//
 //	@externalDocs.description	OpenAPI
 //	@externalDocs.url			https://swagger.io/resources/open-api/
 package main
@@ -124,7 +132,7 @@ func main() {
 	app := fiber.New(fiber.Config{ErrorHandler: httpx.ErrorHandler()})
 	httpx.RegisterCommonMiddlewares(app)
 	_ = rdb // reserved for future http handlers
-	providers := &httpx.Providers{MQ: publisher, ES: esClient}
+	providers := &httpx.Providers{MQ: publisher, ES: esClient, RDB: rdb}
 	httpx.Register(app, client, providers)
 
 	// Watch for dynamic config changes (Apollo)

@@ -24,9 +24,527 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/admin/ping": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Protected route requiring admin role",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Admin Ping",
+                "responses": {
+                    "200": {
+                        "description": "pong",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users/{id}/promote": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Set user.type = admin",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Promote user to admin",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ok",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/anonymous/init": {
+            "post": {
+                "description": "Initialize anonymous visitor, upsert device, issue tokens",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Anonymous Init",
+                "parameters": [
+                    {
+                        "description": "anonymous init",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.AnonymousInitRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auth.TokenResponse"
+                        },
+                        "headers": {
+                            "X-RateLimit-Limit": {
+                                "type": "string",
+                                "description": "Requests per window"
+                            },
+                            "X-RateLimit-Remaining": {
+                                "type": "string",
+                                "description": "Remaining requests"
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "type": "string",
+                                "description": "Seconds to wait"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/fp/sync": {
+            "post": {
+                "description": "Upsert device and fingerprint metadata; bind to current user/visitor",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Fingerprint/Device Sync",
+                "parameters": [
+                    {
+                        "description": "fingerprint/device sync",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.FpSyncRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "headers": {
+                            "X-RateLimit-Limit": {
+                                "type": "string",
+                                "description": "Requests per window"
+                            },
+                            "X-RateLimit-Remaining": {
+                                "type": "string",
+                                "description": "Remaining requests"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "type": "string",
+                                "description": "Seconds to wait"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/login": {
+            "post": {
+                "description": "Authenticate by identifier/password and issue tokens",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login (password)",
+                "parameters": [
+                    {
+                        "description": "login",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auth.TokenResponse"
+                        },
+                        "headers": {
+                            "X-RateLimit-Limit": {
+                                "type": "string",
+                                "description": "Requests per window"
+                            },
+                            "X-RateLimit-Remaining": {
+                                "type": "string",
+                                "description": "Remaining requests"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "type": "string",
+                                "description": "Seconds to wait"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/logout": {
+            "post": {
+                "description": "Clear refresh cookie; access tokens expire naturally",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Logout (clear refresh)",
+                "responses": {
+                    "204": {
+                        "description": "no content",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "type": "string",
+                                "description": "Seconds to wait"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Return current auth context",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Who am I",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "headers": {
+                            "X-RateLimit-Limit": {
+                                "type": "string",
+                                "description": "Requests per window"
+                            },
+                            "X-RateLimit-Remaining": {
+                                "type": "string",
+                                "description": "Remaining requests"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "type": "string",
+                                "description": "Seconds to wait"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/refresh": {
+            "post": {
+                "description": "Mint new access token from refresh cookie",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Refresh Access Token",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auth.TokenResponse"
+                        },
+                        "headers": {
+                            "X-RateLimit-Limit": {
+                                "type": "string",
+                                "description": "Requests per window"
+                            },
+                            "X-RateLimit-Remaining": {
+                                "type": "string",
+                                "description": "Remaining requests"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "type": "string",
+                                "description": "Seconds to wait"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/register": {
+            "post": {
+                "description": "Create user + password identity, then issue tokens",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Register (password)",
+                "parameters": [
+                    {
+                        "description": "register",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auth.TokenResponse"
+                        },
+                        "headers": {
+                            "X-RateLimit-Limit": {
+                                "type": "string",
+                                "description": "Requests per window"
+                            },
+                            "X-RateLimit-Remaining": {
+                                "type": "string",
+                                "description": "Remaining requests"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        },
+                        "headers": {
+                            "Retry-After": {
+                                "type": "string",
+                                "description": "Seconds to wait"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/users": {
             "get": {
-                "description": "支持分页、排序和筛选的用户列表查询",
+                "description": "Supports paging, sorting, and display_name filter",
                 "consumes": [
                     "application/json"
                 ],
@@ -36,78 +554,78 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "获取用户列表",
+                "summary": "List users",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "用户名筛选",
+                        "description": "display_name filter",
                         "name": "name",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "default": 20,
-                        "description": "每页数量",
+                        "description": "page size",
                         "name": "limit",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "default": 0,
-                        "description": "偏移量",
+                        "description": "offset",
                         "name": "offset",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "排序字段",
+                        "description": "sort field",
                         "name": "sort",
                         "in": "query"
                     },
                     {
                         "type": "string",
                         "default": "offset",
-                        "description": "分页模式: offset, cursor, snapshot",
+                        "description": "paging mode: offset|cursor|snapshot",
                         "name": "mode",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "游标位置（cursor模式）",
+                        "description": "cursor value (cursor mode)",
                         "name": "cursor",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "快照时间（snapshot模式）",
+                        "description": "snapshot time (snapshot mode)",
                         "name": "snapshot",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "default": false,
-                        "description": "是否返回总数",
+                        "description": "return total in offset mode",
                         "name": "with_total",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "用户列表",
+                        "description": "user list",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "400": {
-                        "description": "请求参数错误",
+                        "description": "bad request",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "500": {
-                        "description": "内部服务器错误",
+                        "description": "internal error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -116,7 +634,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "创建一个新的用户",
+                "description": "Create a user with display_name",
                 "consumes": [
                     "application/json"
                 ],
@@ -126,38 +644,35 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "创建新用户",
+                "summary": "Create user",
                 "parameters": [
                     {
-                        "description": "用户信息",
+                        "description": "{display_name}",
                         "name": "user",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/users.UserCreateRequest"
                         }
                     }
                 ],
                 "responses": {
                     "201": {
-                        "description": "创建成功",
+                        "description": "created",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "400": {
-                        "description": "请求参数错误",
+                        "description": "bad request",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "500": {
-                        "description": "内部服务器错误",
+                        "description": "internal error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -168,7 +683,7 @@ const docTemplate = `{
         },
         "/health": {
             "get": {
-                "description": "检查API服务的健康状态",
+                "description": "API health/liveness probe",
                 "consumes": [
                     "application/json"
                 ],
@@ -178,10 +693,10 @@ const docTemplate = `{
                 "tags": [
                     "health"
                 ],
-                "summary": "健康检查",
+                "summary": "Health Check",
                 "responses": {
                     "200": {
-                        "description": "服务健康",
+                        "description": "ok",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -193,9 +708,128 @@ const docTemplate = `{
             }
         }
     },
-    "externalDocs": {
-        "description": "OpenAPI",
-        "url": "https://swagger.io/resources/open-api/"
+    "definitions": {
+        "auth.AnonymousInitRequest": {
+            "type": "object",
+            "properties": {
+                "device_id": {
+                    "type": "string",
+                    "example": "web-uuid-123"
+                },
+                "fp_hash": {
+                    "type": "string",
+                    "example": "sha256:abcdef..."
+                },
+                "meta": {
+                    "type": "object",
+                    "additionalProperties": {}
+                }
+            }
+        },
+        "auth.FpSyncRequest": {
+            "type": "object",
+            "properties": {
+                "device_id": {
+                    "type": "string",
+                    "example": "web-uuid-123"
+                },
+                "fp_hash": {
+                    "type": "string",
+                    "example": "sha256:abcdef..."
+                },
+                "ip_hash": {
+                    "type": "string",
+                    "example": "sha256:ip..."
+                },
+                "meta": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "ua_hash": {
+                    "type": "string",
+                    "example": "sha256:ua..."
+                }
+            }
+        },
+        "auth.LoginRequest": {
+            "type": "object",
+            "properties": {
+                "device_id": {
+                    "type": "string",
+                    "example": "web-uuid-123"
+                },
+                "identifier": {
+                    "type": "string",
+                    "example": "alice@example.com"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "Secretp@ssw0rd"
+                }
+            }
+        },
+        "auth.RegisterRequest": {
+            "type": "object",
+            "properties": {
+                "device_id": {
+                    "type": "string",
+                    "example": "web-uuid-123"
+                },
+                "display_name": {
+                    "type": "string",
+                    "example": "Alice"
+                },
+                "identifier": {
+                    "type": "string",
+                    "example": "alice@example.com"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "Secretp@ssw0rd"
+                }
+            }
+        },
+        "auth.TokenResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string",
+                    "example": "\u003cJWT\u003e"
+                },
+                "anon_id": {
+                    "type": "string",
+                    "example": "8a0d1b7c-..."
+                },
+                "device_id": {
+                    "type": "string",
+                    "example": "web-uuid-123"
+                },
+                "expires_in": {
+                    "type": "integer",
+                    "example": 900
+                },
+                "token_type": {
+                    "type": "string",
+                    "example": "Bearer"
+                }
+            }
+        },
+        "users.UserCreateRequest": {
+            "type": "object",
+            "properties": {
+                "display_name": {
+                    "type": "string",
+                    "example": "Alice"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
     }
 }`
 
@@ -204,7 +838,7 @@ var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "localhost:8080",
 	BasePath:         "/api/v1",
-	Schemes:          []string{},
+	Schemes:          []string{"http", "https"},
 	Title:            "Figma Export Ultra API",
 	Description:      "这是一个用于 Figma 数据导出的 API 服务",
 	InfoInstanceName: "swagger",

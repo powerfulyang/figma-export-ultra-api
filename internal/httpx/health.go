@@ -1,16 +1,15 @@
 package httpx
 
 import "github.com/gofiber/fiber/v2"
+import "fiber-ent-apollo-pg/internal/httpx/kit"
 
-// HealthHandler 处理健康检查请求
+// HealthHandler returns liveness status
 //
-//	@Summary		健康检查
-//	@Description	检查API服务的健康状态
-//	@Tags			health
-//	@Accept			json
-//	@Produce		json
-//	@Success		200	{object}	map[string]string	"服务健康"
-//	@Router			/health [get]
-func HealthHandler(c *fiber.Ctx) error {
-	return OK(c, fiber.Map{"status": "ok"})
-}
+//	@Summary      Health Check
+//	@Description  API health/liveness probe
+//	@Tags         health
+//	@Accept       json
+//	@Produce      json
+//	@Success      200  {object}  map[string]string  "ok"
+//	@Router       /health [get]
+func HealthHandler(c *fiber.Ctx) error { return kit.OK(c, fiber.Map{"status": "ok"}) }
