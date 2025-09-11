@@ -1,6 +1,7 @@
 package httpx
 
 import (
+	"fiber-ent-apollo-pg/pkg"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -24,14 +25,17 @@ func RegisterCommonMiddlewares(app *fiber.App) {
 	// Structured access log
 	app.Use(func(c *fiber.Ctx) error {
 		start := time.Now()
+		// expose timing to downstream handlers
+		c.Locals("req_start", start)
 		err := c.Next()
-		latency := time.Since(start)
+		latency := pkg.SmartDurationFormat(time.Since(start))
+		c.Set("X-Response-Time", latency)
 		rid := kit.RequestID(c)
 		httpxLogger.Info("access",
 			zap.String("method", c.Method()),
 			zap.String("path", c.OriginalURL()),
 			zap.Int("status", c.Response().StatusCode()),
-			zap.Int64("latency_ms", latency.Milliseconds()),
+			zap.String("latency", latency),
 			zap.String("ip", c.IP()),
 			zap.String("ua", c.Get("User-Agent")),
 			zap.String("request_id", rid),

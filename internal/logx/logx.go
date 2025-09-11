@@ -282,7 +282,7 @@ func MustGetScope(scope string) *Logger {
 // ListScopes returns all registered scope names
 func ListScopes() []string {
 	var scopes []string
-	scopeLoggers.Range(func(key, value interface{}) bool {
+	scopeLoggers.Range(func(key, _ interface{}) bool {
 		scopes = append(scopes, key.(string))
 		return true
 	})

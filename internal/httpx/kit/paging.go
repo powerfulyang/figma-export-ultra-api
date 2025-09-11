@@ -33,6 +33,7 @@ type PagingParams struct {
 	WithTotal bool
 }
 
+// ParsePaging parses pagination-related query params into PagingParams.
 func ParsePaging(c *fiber.Ctx) (PagingParams, error) {
 	p := PagingParams{Limit: lo.Clamp(c.QueryInt("limit", 20), 1, 100)}
 	p.Offset = c.QueryInt("offset", 0)
@@ -88,12 +89,14 @@ func ParsePaging(c *fiber.Ctx) (PagingParams, error) {
 	return p, nil
 }
 
+// EncodeCursor encodes id and timestamp into a base64 cursor string.
 func EncodeCursor(id string, ts time.Time) string {
 	payload := CursorPayload{ID: id, TS: ts.UTC()}
 	b, _ := json.Marshal(payload)
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
+// DecodeCursor decodes a base64 cursor string back into its payload.
 func DecodeCursor(s string) (CursorPayload, error) {
 	var out CursorPayload
 	if b, err := base64.RawURLEncoding.DecodeString(s); err == nil && len(b) > 0 {

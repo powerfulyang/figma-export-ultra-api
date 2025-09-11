@@ -1,3 +1,4 @@
+// Package mw contains HTTP middleware including authentication and rate limiting.
 package mw
 
 import (
@@ -6,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// AuthContext holds authentication details extracted from JWT.
 type AuthContext struct {
 	Subject  string // user:<uuid> or visitor:<uuid>
 	Kind     string // user | anon
@@ -13,10 +15,10 @@ type AuthContext struct {
 	DeviceID string
 }
 
-// JWTMiddleware expects a validator function to parse token and return claims-like struct.
-// To avoid tight coupling, pass a function that returns (subject, kind, roles, deviceID, error).
+// TokenParser parses a token string and returns subject, kind, roles, deviceID.
 type TokenParser func(token string) (string, string, []string, string, error)
 
+// JWTMiddlewareDynamic attaches auth context parsed by the given token parser.
 func JWTMiddlewareDynamic(parse TokenParser) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		authz := c.Get("Authorization")

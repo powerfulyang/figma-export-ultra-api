@@ -12,7 +12,7 @@ import (
 	"fiber-ent-apollo-pg/internal/httpx/kit"
 )
 
-// GetUsersHandler
+// GetUsersHandler returns a paginated list of users.
 //
 //	@Summary      List users
 //	@Description  Supports paging, sorting, and display_name filter

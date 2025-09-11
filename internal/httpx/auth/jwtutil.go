@@ -15,7 +15,8 @@ import (
 	"fiber-ent-apollo-pg/internal/config"
 )
 
-type AuthClaims struct {
+// Claims represents JWT claims used by this service.
+type Claims struct {
 	Kind     string   `json:"kind"`
 	Roles    []string `json:"roles,omitempty"`
 	DeviceID string   `json:"device_id,omitempty"`
@@ -101,7 +102,7 @@ func SignAccess(cfg *config.Config, sub string, kind string, roles []string, dev
 	}
 	now := time.Now().UTC()
 	jti := uuid.NewString()
-	claims := &AuthClaims{
+	claims := &Claims{
 		Kind:     kind,
 		Roles:    roles,
 		DeviceID: deviceID,
@@ -128,7 +129,7 @@ func SignRefresh(cfg *config.Config, sub string, kind string, deviceID string) (
 	}
 	now := time.Now().UTC()
 	jti := uuid.NewString()
-	claims := &AuthClaims{
+	claims := &Claims{
 		Kind:     kind,
 		DeviceID: deviceID,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -147,20 +148,20 @@ func SignRefresh(cfg *config.Config, sub string, kind string, deviceID string) (
 }
 
 // ParseAndValidate verifies a token string and returns claims.
-func ParseAndValidate(cfg *config.Config, tokenStr string) (*AuthClaims, error) {
+func ParseAndValidate(cfg *config.Config, tokenStr string) (*Claims, error) {
 	keys, err := loadKeys(cfg)
 	if err != nil {
 		return nil, err
 	}
 	parser := jwt.NewParser(jwt.WithValidMethods([]string{keys.method.Alg()}))
-	tok, err := parser.ParseWithClaims(tokenStr, &AuthClaims{}, func(t *jwt.Token) (interface{}, error) { return keys.verifyKey, nil })
+	tok, err := parser.ParseWithClaims(tokenStr, &Claims{}, func(_ *jwt.Token) (interface{}, error) { return keys.verifyKey, nil })
 	if err != nil {
 		return nil, err
 	}
 	if !tok.Valid {
 		return nil, errors.New("invalid token")
 	}
-	claims, ok := tok.Claims.(*AuthClaims)
+	claims, ok := tok.Claims.(*Claims)
 	if !ok {
 		return nil, errors.New("invalid claims")
 	}

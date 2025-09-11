@@ -12,7 +12,7 @@ import (
 	"fiber-ent-apollo-pg/internal/httpx/kit"
 )
 
-// AdminPingHandler example protected route
+// PingHandler example protected route
 //
 //	@Summary      Admin Ping
 //	@Description  Protected route requiring admin role
@@ -24,7 +24,7 @@ import (
 //	@Failure      401  {object}  map[string]interface{}  "unauthorized"
 //	@Failure      403  {object}  map[string]interface{}  "forbidden"
 //	@Router       /api/v1/admin/ping [get]
-func AdminPingHandler() fiber.Handler {
+func PingHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error { return kit.OK(c, fiber.Map{"message": "pong"}) }
 }
 

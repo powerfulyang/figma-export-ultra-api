@@ -62,6 +62,6 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 	v1.Get("/auth/me", mw.RateLimitDefault(rdb, cfg.RL.MeWindowSec, cfg.RL.MeMax), auth.MeHandler())
 
 	// Protected admin example (requires admin role)
-	v1.Get("/admin/ping", mw.RequireUser(), mw.RequireRoles("admin"), admin.AdminPingHandler())
+	v1.Get("/admin/ping", mw.RequireUser(), mw.RequireRoles("admin"), admin.PingHandler())
 	v1.Post("/admin/users/:id/promote", mw.RequireUser(), mw.RequireRoles("admin"), admin.PromoteUserHandler(client))
 }

@@ -15,7 +15,7 @@ import (
 )
 
 // RateLimitDefault builds a rate limit middleware with a composite key of ip+device+anon+subject.
-func RateLimitDefault(rdb *redisx.Client, windowSec int, max int) fiber.Handler {
+func RateLimitDefault(rdb *redisx.Client, windowSec int, limit int) fiber.Handler {
 	keyFn := func(c *fiber.Ctx) string {
 		ip := c.IP()
 		dev := c.Get("X-Device-Id")
@@ -31,10 +31,10 @@ func RateLimitDefault(rdb *redisx.Client, windowSec int, max int) fiber.Handler 
 	}
 	if rdb == nil {
 		return limiter.New(limiter.Config{
-			Max:          max,
+			Max:          limit,
 			Expiration:   time.Duration(windowSec) * time.Second,
 			KeyGenerator: func(c *fiber.Ctx) string { return keyFn(c) },
-			LimitReached: func(c *fiber.Ctx) error {
+			LimitReached: func(_ *fiber.Ctx) error {
 				return fiber.NewError(fiber.StatusTooManyRequests, "rate limit exceeded")
 			},
 		})
@@ -53,17 +53,17 @@ return current`)
 			return c.Next()
 		}
 		n, _ := res.(int64)
-		if n > int64(max) {
+		if n > int64(limit) {
 			c.Set("Retry-After", fmt.Sprint(windowSec))
-			c.Set("X-RateLimit-Limit", fmt.Sprint(max))
-			c.Set("X-RateLimit-Remaining", fmt.Sprint(lo.Max([]int64{0, int64(max) - n})))
+			c.Set("X-RateLimit-Limit", fmt.Sprint(limit))
+			c.Set("X-RateLimit-Remaining", fmt.Sprint(lo.Max([]int64{0, int64(limit) - n})))
 			return fiber.NewError(fiber.StatusTooManyRequests, "rate limit exceeded")
 		}
-		c.Set("X-RateLimit-Limit", fmt.Sprint(max))
-		c.Set("X-RateLimit-Remaining", fmt.Sprint(int64(max)-n))
+		c.Set("X-RateLimit-Limit", fmt.Sprint(limit))
+		c.Set("X-RateLimit-Remaining", fmt.Sprint(int64(limit)-n))
 		return c.Next()
 	}
 }
 
-// Wrapper helper to expose RequestID where needed
+// RequestID returns the request ID from context.
 func RequestID(c *fiber.Ctx) string { return kit.RequestID(c) }

@@ -27,6 +27,13 @@ func TestE2E_Health(t *testing.T) {
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("unexpected status: %d", res.StatusCode)
 	}
+	// Middleware should set timing headers
+	if got := res.Header.Get("X-Response-Time"); got == "" {
+		t.Fatalf("missing X-Response-Time header")
+	}
+	if got := res.Header.Get("Server-Timing"); got == "" || got[:8] != "app;dur=" {
+		t.Fatalf("missing or invalid Server-Timing header: %q", got)
+	}
 	var body struct {
 		Code    string         `json:"code"`
 		Message string         `json:"message"`

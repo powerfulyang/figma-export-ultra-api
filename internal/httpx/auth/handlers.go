@@ -193,101 +193,125 @@ func FpSyncHandler(client *ent.Client) fiber.Handler {
 		ctx, cancel := context.WithTimeout(c.Context(), 3*time.Second)
 		defer cancel()
 
-		var userID *uuid.UUID
-		var visitorID *uuid.UUID
-		if ac, _ := c.Locals("auth").(*mw.AuthContext); ac != nil {
-			if ac.Kind == "user" && strings.HasPrefix(ac.Subject, "user:") {
-				if uid, err := uuid.Parse(strings.TrimPrefix(ac.Subject, "user:")); err == nil {
-					userID = &uid
-				}
-			}
-			if ac.Kind == "anon" && strings.HasPrefix(ac.Subject, "visitor:") {
-				if vid, err := uuid.Parse(strings.TrimPrefix(ac.Subject, "visitor:")); err == nil {
-					visitorID = &vid
-				}
-			}
-		}
-		if visitorID == nil {
-			if an := c.Get("X-Anon-Id"); an != "" {
-				if v, err := client.Visitor.Query().Where(visitor.AnonIDEQ(an)).Only(ctx); err == nil {
-					visitorID = &v.ID
-				}
-			}
-		}
+		userID, visitorID := resolveAuthIDsForSync(ctx, c, client)
 		if userID == nil && visitorID == nil {
 			return fiber.ErrUnauthorized
 		}
 
 		now := time.Now().UTC()
-		// Upsert device
-		if d, err := client.Device.Query().Where(device.DeviceIDEQ(req.DeviceID)).First(ctx); err == nil {
-			upd := client.Device.UpdateOne(d).SetLastSeenAt(now)
-			if userID != nil {
-				upd = upd.ClearVisitor().SetUserID(*userID)
-			} else if visitorID != nil {
-				upd = upd.ClearUser().SetVisitorID(*visitorID)
-			}
-			if req.Meta != nil {
-				upd = upd.SetMeta(req.Meta)
-			}
-			if err := upd.Exec(ctx); err != nil {
-				return kit.InternalError("update device failed", err.Error())
-			}
-		} else if ent.IsNotFound(err) {
-			cr := client.Device.Create().SetDeviceID(req.DeviceID).SetLastSeenAt(now)
-			if userID != nil {
-				cr = cr.SetUserID(*userID)
-			}
-			if visitorID != nil {
-				cr = cr.SetVisitorID(*visitorID)
-			}
-			if req.Meta != nil {
-				cr = cr.SetMeta(req.Meta)
-			}
-			if _, err := cr.Save(ctx); err != nil {
-				return kit.InternalError("create device failed", err.Error())
-			}
-		} else if err != nil {
-			return kit.InternalError("query device failed", err.Error())
+		if err := upsertDevice(ctx, client, userID, visitorID, &req, now); err != nil {
+			return err
 		}
-
-		// Upsert fingerprint (only bind to visitor if available)
-		if req.FPHash != nil && *req.FPHash != "" {
-			if f, err := client.Fingerprint.Query().Where(fingerprint.FpHashEQ(*req.FPHash)).First(ctx); err == nil {
-				upd := client.Fingerprint.UpdateOne(f).SetLastSeenAt(now)
-				if req.UAHash != nil {
-					upd = upd.SetUaHash(*req.UAHash)
-				}
-				if req.IPHash != nil {
-					upd = upd.SetIPHash(*req.IPHash)
-				}
-				if visitorID != nil {
-					upd = upd.SetVisitorID(*visitorID)
-				}
-				if err := upd.Exec(ctx); err != nil {
-					return kit.InternalError("update fingerprint failed", err.Error())
-				}
-			} else if ent.IsNotFound(err) {
-				cr := client.Fingerprint.Create().SetFpHash(*req.FPHash).SetLastSeenAt(now)
-				if req.UAHash != nil {
-					cr = cr.SetUaHash(*req.UAHash)
-				}
-				if req.IPHash != nil {
-					cr = cr.SetIPHash(*req.IPHash)
-				}
-				if visitorID != nil {
-					cr = cr.SetVisitorID(*visitorID)
-				}
-				if _, err := cr.Save(ctx); err != nil {
-					return kit.InternalError("create fingerprint failed", err.Error())
-				}
-			} else if err != nil {
-				return kit.InternalError("query fingerprint failed", err.Error())
-			}
+		if err := upsertFingerprint(ctx, client, visitorID, &req, now); err != nil {
+			return err
 		}
 
 		return kit.OK(c, fiber.Map{"status": "ok"})
 	}
+}
+
+// resolveAuthIDsForSync extracts userID/visitorID from auth context or headers.
+func resolveAuthIDsForSync(ctx context.Context, c *fiber.Ctx, client *ent.Client) (*uuid.UUID, *uuid.UUID) {
+	var userID *uuid.UUID
+	var visitorID *uuid.UUID
+	if ac, _ := c.Locals("auth").(*mw.AuthContext); ac != nil {
+		if ac.Kind == "user" && strings.HasPrefix(ac.Subject, "user:") {
+			if uid, err := uuid.Parse(strings.TrimPrefix(ac.Subject, "user:")); err == nil {
+				userID = &uid
+			}
+		}
+		if ac.Kind == "anon" && strings.HasPrefix(ac.Subject, "visitor:") {
+			if vid, err := uuid.Parse(strings.TrimPrefix(ac.Subject, "visitor:")); err == nil {
+				visitorID = &vid
+			}
+		}
+	}
+	if visitorID == nil {
+		if an := c.Get("X-Anon-Id"); an != "" {
+			if v, err := client.Visitor.Query().Where(visitor.AnonIDEQ(an)).Only(ctx); err == nil {
+				visitorID = &v.ID
+			}
+		}
+	}
+	return userID, visitorID
+}
+
+// upsertDevice updates or creates the device and binds to user/visitor as needed.
+func upsertDevice(ctx context.Context, client *ent.Client, userID, visitorID *uuid.UUID, req *FpSyncRequest, now time.Time) error {
+	if d, err := client.Device.Query().Where(device.DeviceIDEQ(req.DeviceID)).First(ctx); err == nil {
+		upd := client.Device.UpdateOne(d).SetLastSeenAt(now)
+		if userID != nil {
+			upd = upd.ClearVisitor().SetUserID(*userID)
+		} else if visitorID != nil {
+			upd = upd.ClearUser().SetVisitorID(*visitorID)
+		}
+		if req.Meta != nil {
+			upd = upd.SetMeta(req.Meta)
+		}
+		if err := upd.Exec(ctx); err != nil {
+			return kit.InternalError("update device failed", err.Error())
+		}
+		return nil
+	} else if ent.IsNotFound(err) {
+		cr := client.Device.Create().SetDeviceID(req.DeviceID).SetLastSeenAt(now)
+		if userID != nil {
+			cr = cr.SetUserID(*userID)
+		}
+		if visitorID != nil {
+			cr = cr.SetVisitorID(*visitorID)
+		}
+		if req.Meta != nil {
+			cr = cr.SetMeta(req.Meta)
+		}
+		if _, err := cr.Save(ctx); err != nil {
+			return kit.InternalError("create device failed", err.Error())
+		}
+		return nil
+	} else if err != nil {
+		return kit.InternalError("query device failed", err.Error())
+	}
+	return nil
+}
+
+// upsertFingerprint updates or creates fingerprint; binds to visitor if available.
+func upsertFingerprint(ctx context.Context, client *ent.Client, visitorID *uuid.UUID, req *FpSyncRequest, now time.Time) error {
+	if req.FPHash == nil || *req.FPHash == "" {
+		return nil
+	}
+	if f, err := client.Fingerprint.Query().Where(fingerprint.FpHashEQ(*req.FPHash)).First(ctx); err == nil {
+		upd := client.Fingerprint.UpdateOne(f).SetLastSeenAt(now)
+		if req.UAHash != nil {
+			upd = upd.SetUaHash(*req.UAHash)
+		}
+		if req.IPHash != nil {
+			upd = upd.SetIPHash(*req.IPHash)
+		}
+		if visitorID != nil {
+			upd = upd.SetVisitorID(*visitorID)
+		}
+		if err := upd.Exec(ctx); err != nil {
+			return kit.InternalError("update fingerprint failed", err.Error())
+		}
+		return nil
+	} else if ent.IsNotFound(err) {
+		cr := client.Fingerprint.Create().SetFpHash(*req.FPHash).SetLastSeenAt(now)
+		if req.UAHash != nil {
+			cr = cr.SetUaHash(*req.UAHash)
+		}
+		if req.IPHash != nil {
+			cr = cr.SetIPHash(*req.IPHash)
+		}
+		if visitorID != nil {
+			cr = cr.SetVisitorID(*visitorID)
+		}
+		if _, err := cr.Save(ctx); err != nil {
+			return kit.InternalError("create fingerprint failed", err.Error())
+		}
+		return nil
+	} else if err != nil {
+		return kit.InternalError("query fingerprint failed", err.Error())
+	}
+	return nil
 }
 
 // LoginHandler authenticates a user via password identity and returns JWTs.
