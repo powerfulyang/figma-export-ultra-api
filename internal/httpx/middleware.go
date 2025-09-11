@@ -7,9 +7,12 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
+	"go.uber.org/zap"
 
 	"fiber-ent-apollo-pg/internal/logx"
 )
+
+var httpxLogger = logx.GetScope("httpx")
 
 // RegisterCommonMiddlewares registers common middlewares and a structured access log.
 func RegisterCommonMiddlewares(app *fiber.App) {
@@ -23,14 +26,14 @@ func RegisterCommonMiddlewares(app *fiber.App) {
 		err := c.Next()
 		latency := time.Since(start)
 		rid := requestID(c)
-		logx.L().Info("access",
-			"method", c.Method(),
-			"path", c.OriginalURL(),
-			"status", c.Response().StatusCode(),
-			"latency_ms", latency.Milliseconds(),
-			"ip", c.IP(),
-			"ua", c.Get("User-Agent"),
-			"request_id", rid,
+		httpxLogger.Info("access",
+			zap.String("method", c.Method()),
+			zap.String("path", c.OriginalURL()),
+			zap.Int("status", c.Response().StatusCode()),
+			zap.Int64("latency_ms", latency.Milliseconds()),
+			zap.String("ip", c.IP()),
+			zap.String("ua", c.Get("User-Agent")),
+			zap.String("request_id", rid),
 		)
 		return err
 	})

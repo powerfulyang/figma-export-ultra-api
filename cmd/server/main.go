@@ -29,6 +29,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
+	"go.uber.org/zap"
 
 	"fiber-ent-apollo-pg/internal/config"
 	"fiber-ent-apollo-pg/internal/db"
@@ -55,14 +56,23 @@ func main() {
 		defer apClose()
 	}
 
-	// Init logger
+	// Init global logger first
 	logx.Init(cfg.Log.Level, cfg.Log.Format)
-	logx.L().Info("config loaded", "env", cfg.AppEnv, "addr", cfg.Server.Addr, "log.level", cfg.Log.Level, "log.format", cfg.Log.Format)
+
+	// Create the main scope logger using the convenient GetScope function
+	mainLogger := logx.GetScope("main")
+
+	mainLogger.Info("config loaded",
+		zap.String("env", cfg.AppEnv),
+		zap.String("addr", cfg.Server.Addr),
+		zap.String("log.level", cfg.Log.Level),
+		zap.String("log.format", cfg.Log.Format),
+	)
 
 	// Open DB (Ent + pgx)
 	client, closeDB, err := db.Open(cfg)
 	if err != nil {
-		logx.L().Error("open db error", "err", err)
+		mainLogger.Sugar().Error("open db error", "err", err)
 		panic(err)
 	}
 	defer closeDB()
@@ -71,7 +81,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := client.Schema.Create(ctx); err != nil {
-		logx.L().Error("auto migrate error", "err", err)
+		mainLogger.Sugar().Error("auto migrate error", "err", err)
 		panic(err)
 	}
 
@@ -82,7 +92,7 @@ func main() {
 	)
 	rdb, rclose, err := redisx.Open(cfg)
 	if err != nil {
-		logx.L().Warn("redis init failed", "err", err)
+		mainLogger.Sugar().Warn("redis init failed", "err", err)
 	} else {
 		redisClose = rclose
 		defer redisClose()
@@ -91,7 +101,7 @@ func main() {
 	var publisher mqx.Publisher
 	if cfg.MQ.URL != "" {
 		if pub, err := mqx.NewRabbitPublisher(cfg.MQ.URL, "events"); err != nil {
-			logx.L().Warn("mq init failed", "err", err)
+			mainLogger.Sugar().Warn("mq init failed", "err", err)
 		} else {
 			publisher = pub
 			mqClose = pub.Close
@@ -105,7 +115,7 @@ func main() {
 
 	esClient, esClose, err := esx.Open(cfg)
 	if err != nil {
-		logx.L().Warn("es init failed", "err", err)
+		mainLogger.Sugar().Warn("es init failed", "err", err)
 	} else {
 		defer esClose()
 	}
@@ -131,17 +141,25 @@ func main() {
 	store.Watch(func(newCfg *config.Config, changed map[string]bool) {
 		if changed["pg.max_open"] || changed["pg.max_idle"] {
 			db.UpdatePool(newCfg.PG.MaxOpenConns, newCfg.PG.MaxIdleConns)
-			logx.L().Info("db pool updated", "max_open", newCfg.PG.MaxOpenConns, "max_idle", newCfg.PG.MaxIdleConns)
+			mainLogger.Info("db pool updated",
+				zap.Int("max_open", newCfg.PG.MaxOpenConns),
+				zap.Int("max_idle", newCfg.PG.MaxIdleConns),
+			)
 		}
 		if changed["pg.url"] {
-			logx.L().Warn("pg.url changed; restart required to reconnect")
+			mainLogger.Warn("pg.url changed; restart required to reconnect")
 		}
 		if changed["server.addr"] {
-			logx.L().Warn("server.addr changed; restart required to take effect", "addr", newCfg.Server.Addr)
+			mainLogger.Warn("server.addr changed; restart required to take effect",
+				zap.String("addr", newCfg.Server.Addr),
+			)
 		}
 		if changed["log.level"] || changed["log.format"] {
 			logx.Init(newCfg.Log.Level, newCfg.Log.Format)
-			logx.L().Info("logger reconfigured", "level", newCfg.Log.Level, "format", newCfg.Log.Format)
+			mainLogger.Info("logger reconfigured",
+				zap.String("level", newCfg.Log.Level),
+				zap.String("format", newCfg.Log.Format),
+			)
 		}
 	})
 
@@ -149,18 +167,18 @@ func main() {
 	go func() {
 		ln, err := server.GetListener(cfg.Server.Addr)
 		if err != nil {
-			logx.L().Error("listener error", "err", err)
+			mainLogger.Sugar().Errorf("listener error: %v", err)
 			return
 		}
 		if err := app.Listener(ln); err != nil {
-			logx.L().Info("fiber exit", "err", err)
+			mainLogger.Sugar().Infof("fiber exit: %v", err)
 		}
 	}()
-	logx.L().Info("server started", "addr", cfg.Server.Addr)
+	mainLogger.Sugar().Infof("server started on %s", cfg.Server.Addr)
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig
-	logx.L().Info("shutting down...")
+	mainLogger.Sugar().Info("shutting down...")
 	_ = app.Shutdown()
 }

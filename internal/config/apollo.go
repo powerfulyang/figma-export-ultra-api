@@ -2,7 +2,6 @@
 package config
 
 import (
-	"log"
 	"strconv"
 
 	agollo "github.com/apolloconfig/agollo/v4"
@@ -16,7 +15,7 @@ import (
 // Returns a closer to stop the Apollo client.
 func overrideFromApollo(cfg *Config, store *Store) (func(), error) {
 	if cfg.Apollo.Addrs == "" || cfg.Apollo.AppID == "" {
-		log.Println("apollo: missing APOLLO_ADDRS or APOLLO_APP_ID; skip")
+		configLogger.Sugar().Info("apollo: missing APOLLO_ADDRS or APOLLO_APP_ID; skip")
 		return nil, nil
 	}
 
@@ -98,7 +97,7 @@ type changeLogger struct {
 }
 
 func (c *changeLogger) OnChange(e *storage.ChangeEvent) {
-	log.Printf("apollo change: namespace=%s, changes=%d", e.Namespace, len(e.Changes))
+	configLogger.Sugar().Infof("apollo change: namespace=%s, changes=%d", e.Namespace, len(e.Changes))
 	// Build new config based on current and apply overrides
 	cur := c.store.Get()
 	next := cloneConfig(cur)

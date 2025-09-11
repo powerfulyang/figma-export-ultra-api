@@ -4,7 +4,7 @@ tmp_dir = "tmp"
 
 [build]
 # Generate ent code before building to reflect schema changes
-pre_cmd = ["go generate ./ent"]
+#pre_cmd = ["go generate ./ent"]
 cmd = "go build -o ./tmp/server.exe ./cmd/server"
 bin = "./tmp/server.exe"
 full_bin = ""

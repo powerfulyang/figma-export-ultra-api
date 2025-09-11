@@ -3,7 +3,6 @@ package db
 
 import (
 	"database/sql"
-	"log"
 
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
@@ -11,7 +10,10 @@ import (
 
 	"fiber-ent-apollo-pg/ent"
 	"fiber-ent-apollo-pg/internal/config"
+	"fiber-ent-apollo-pg/internal/logx"
 )
+
+var dbLogger = logx.GetScope("db")
 
 var baseDB *sql.DB
 
@@ -30,7 +32,7 @@ func Open(cfg *config.Config) (*ent.Client, func(), error) {
 	closer := func() {
 		baseDB = nil
 		if err := client.Close(); err != nil {
-			log.Printf("close ent client: %v", err)
+			dbLogger.Sugar().Errorf("close ent client: %v", err)
 		}
 	}
 	return client, closer, nil

@@ -1,12 +1,15 @@
 package config
 
 import (
-	"log"
 	"os"
 	"strconv"
 
 	"github.com/samber/lo"
+
+	"fiber-ent-apollo-pg/internal/logx"
 )
+
+var configLogger = logx.GetScope("config")
 
 // Config holds the application configuration
 type Config struct {
@@ -85,7 +88,7 @@ func Load() (*Config, *Store, func(), error) {
 	if cfg.Apollo.Enable {
 		closer, err := overrideFromApollo(cfg, store)
 		if err != nil {
-			log.Printf("apollo override failed: %v", err)
+			configLogger.Sugar().Errorf("apollo override failed: %v", err)
 			return cfg, store, closer, err
 		}
 		return cfg, store, closer, nil

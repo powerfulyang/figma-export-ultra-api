@@ -4,6 +4,7 @@ package logx
 import (
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -17,7 +18,10 @@ type Logger struct {
 	prefix string
 }
 
-var globalLogger *Logger
+var (
+	globalLogger *Logger
+	scopeLoggers sync.Map // scope name -> *Logger
+)
 
 func init() {
 	// 初始化默认全局 logger
@@ -45,15 +49,18 @@ func New(prefix string) (*Logger, error) {
 	}
 
 	zapLogger, err := config.Build(
+		zap.AddCaller(),
 		zap.AddCallerSkip(1), // 跳过封装层
 	)
 	if err != nil {
 		return nil, err
 	}
 
+	zapSugar := zapLogger.Sugar().WithOptions(zap.AddCallerSkip(-1))
+
 	return &Logger{
 		zap:    zapLogger,
-		sugar:  zapLogger.Sugar(),
+		sugar:  zapSugar,
 		prefix: prefix,
 	}, nil
 }
@@ -114,15 +121,18 @@ func Init(level, format string) {
 	config.Level = zap.NewAtomicLevelAt(lvl)
 
 	zapLogger, err := config.Build(
+		zap.AddCaller(),
 		zap.AddCallerSkip(1), // 跳过封装层
 	)
 	if err != nil {
 		panic(err)
 	}
 
+	zapSugar := zapLogger.Sugar().WithOptions(zap.AddCallerSkip(-1))
+
 	globalLogger = &Logger{
 		zap:    zapLogger,
-		sugar:  zapLogger.Sugar(),
+		sugar:  zapSugar,
 		prefix: "",
 	}
 }
@@ -167,7 +177,7 @@ func parseLevel(s string) zapcore.Level {
 func (l *Logger) SetLevel(level zapcore.Level) {
 	if l.zap != nil {
 		l.zap = l.zap.WithOptions(zap.IncreaseLevel(level))
-		l.sugar = l.zap.Sugar()
+		l.sugar = l.sugar.WithOptions(zap.IncreaseLevel(level))
 	}
 }
 
@@ -228,4 +238,58 @@ func (l *Logger) Fatal(msg string, fields ...zap.Field) {
 		return
 	}
 	l.zap.Fatal(msg, fields...)
+}
+
+// Scope logger management utilities
+
+// GetScope returns or creates a scope logger for the given scope name.
+// If a logger for this scope already exists, it returns the cached instance.
+// This is thread-safe and helps avoid creating duplicate loggers for the same scope.
+func GetScope(scope string) *Logger {
+	if logger, ok := scopeLoggers.Load(scope); ok {
+		return logger.(*Logger)
+	}
+
+	// Create a new scope logger
+	logger, err := New(scope)
+	if err != nil {
+		// Fallback to global logger if scope creation fails
+		Global().Sugar().Errorf("failed to create scope logger for '%s', falling back to global logger: %v", scope, err)
+		return globalLogger
+	}
+
+	// Store in cache
+	actual, loaded := scopeLoggers.LoadOrStore(scope, logger)
+	if loaded {
+		// Another goroutine created it first, return that one
+		return actual.(*Logger)
+	}
+
+	return logger
+}
+
+// MustGetScope returns a scope logger for the given scope name.
+// Panics if the logger cannot be created (should only be used during initialization).
+func MustGetScope(scope string) *Logger {
+	logger, err := New(scope)
+	if err != nil {
+		panic(err)
+	}
+	scopeLoggers.Store(scope, logger)
+	return logger
+}
+
+// ListScopes returns all registered scope names
+func ListScopes() []string {
+	var scopes []string
+	scopeLoggers.Range(func(key, value interface{}) bool {
+		scopes = append(scopes, key.(string))
+		return true
+	})
+	return scopes
+}
+
+// ClearScope removes a scope logger from the cache
+func ClearScope(scope string) {
+	scopeLoggers.Delete(scope)
 }
