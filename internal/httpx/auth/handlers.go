@@ -91,7 +91,7 @@ func AnonymousInitHandler(cfg *config.Config, client *ent.Client) fiber.Handler 
 	}
 }
 
-// RefreshHandler issues a new access token using refresh cookie.
+// RefreshHandler issues a new access token using a refresh cookie.
 //
 //	@Summary      Refresh Access Token
 //	@Description  Mint new access token from refresh cookie

@@ -110,8 +110,8 @@ func Load() (*Config, *Store, func(), error) {
 	cfg.Apollo.AccessKey = getEnv("APOLLO_ACCESS_KEY", "")
 
 	// JWT
-	cfg.JWT.Algo = getEnv("JWT_ALGO", "RS256")
-	cfg.JWT.Issuer = getEnv("JWT_ISSUER", "fiber-ent-app")
+	cfg.JWT.Algo = getEnv("JWT_ALGO", "HS256")
+	cfg.JWT.Issuer = getEnv("JWT_ISSUER", "figma-export")
 	cfg.JWT.Audience = getEnv("JWT_AUDIENCE", "web")
 	cfg.JWT.AccessMin = getInt("JWT_ACCESS_MIN", 15)
 	cfg.JWT.RefreshDays = getInt("JWT_REFRESH_DAYS", 7)

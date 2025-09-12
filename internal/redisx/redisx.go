@@ -10,7 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// Client is an alias for Redis client
+// Client is an alias for a Redis client
 type Client = redis.Client
 
 // Open creates a new Redis client based on configuration

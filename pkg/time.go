@@ -1,3 +1,7 @@
+// Package pkg provides small utility helpers shared across the project.
+//
+// It currently includes time formatting utilities like SmartDurationFormat
+// for concise, human-readable duration strings without external dependencies.
 package pkg
 
 import (

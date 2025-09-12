@@ -1,6 +1,6 @@
 SHELL := /bin/sh
 
-.PHONY: tidy gen run build dev lint test test-unit cover test-integration compose-up compose-down
+.PHONY: tidy gen run build dev lint test test-unit cover test-integration compose-up compose-down swagger-gen swagger-install swagger-serve swagger-validate
 
 tidy:
 	go mod tidy
@@ -39,3 +39,20 @@ compose-up:
 
 compose-down:
 	docker compose down -v
+
+# Generate Swagger documentation
+swagger-gen:
+	go run github.com/swaggo/swag/cmd/swag@latest init -g cmd/server/main.go -o ./docs
+
+# Install swag tool globally (optional)
+swagger-install:
+	go install github.com/swaggo/swag/cmd/swag@latest
+
+# Serve Swagger UI (requires swag to be installed)
+swagger-serve:
+	swag init -g cmd/server/main.go -o ./docs && \
+	echo "Swagger docs generated. Start your server with 'make run' and visit http://localhost:8080/swagger/index.html"
+
+# Validate Swagger documentation
+swagger-validate:
+	go run github.com/swaggo/swag/cmd/swag@latest init -g cmd/server/main.go -o ./docs --parseVendor

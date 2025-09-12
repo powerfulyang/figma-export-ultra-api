@@ -10,7 +10,6 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/samber/lo"
 
-	"fiber-ent-apollo-pg/internal/httpx/kit"
 	"fiber-ent-apollo-pg/internal/redisx"
 )
 
@@ -64,6 +63,3 @@ return current`)
 		return c.Next()
 	}
 }
-
-// RequestID returns the request ID from context.
-func RequestID(c *fiber.Ctx) string { return kit.RequestID(c) }
