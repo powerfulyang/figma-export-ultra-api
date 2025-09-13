@@ -69,10 +69,9 @@ func Test_Open_With_PostgresContainer(t *testing.T) {
 		t.Fatalf("ent ping: %v", err)
 	}
 
-	// 测试创建用户
+	// 测试创建用户（按当前 Ent 模型字段）
 	user, err := c.User.Create().
-		SetUsername("test_user").
-		SetIsActive(true).
+		SetDisplayName("test_user").
 		SetCreatedAt(time.Now()).
 		SetUpdatedAt(time.Now()).
 		Save(ctx2)
@@ -81,8 +80,8 @@ func Test_Open_With_PostgresContainer(t *testing.T) {
 	}
 
 	// 验证用户创建成功
-	if user.Username != "test_user" {
-		t.Errorf("expected user name 'test_user', got '%s'", user.Username)
+	if user.DisplayName != "test_user" {
+		t.Errorf("expected display_name 'test_user', got '%s'", user.DisplayName)
 	}
 
 	// 测试查询用户
