@@ -1,4 +1,4 @@
-FROM golang:1.24.1-alpine AS builder
+FROM golang:1.25.1-alpine AS builder
 
 # 安装必要的工具
 RUN apk add --no-cache git ca-certificates tzdata
@@ -16,7 +16,7 @@ RUN go mod download
 RUN go mod verify
 
 # 生成
-go generate ./...
+RUN go generate ./...
 
 # 复制源代码（源代码变化频率高，放在依赖下载之后）
 COPY . .

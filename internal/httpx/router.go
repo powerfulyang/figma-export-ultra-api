@@ -9,6 +9,8 @@ import (
 	"fiber-ent-apollo-pg/internal/esx"
 	"fiber-ent-apollo-pg/internal/httpx/admin"
 	"fiber-ent-apollo-pg/internal/httpx/auth"
+	"fiber-ent-apollo-pg/internal/httpx/configs"
+	"fiber-ent-apollo-pg/internal/httpx/groups"
 	"fiber-ent-apollo-pg/internal/httpx/mw"
 	"fiber-ent-apollo-pg/internal/httpx/users"
 	"fiber-ent-apollo-pg/internal/mqx"
@@ -64,4 +66,18 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 	// Protected admin example (requires admin role)
 	v1.Get("/admin/ping", mw.RequireUser(), mw.RequireRoles("admin"), admin.PingHandler())
 	v1.Post("/admin/users/:id/promote", mw.RequireUser(), mw.RequireRoles("admin"), admin.PromoteUserHandler(client))
+
+	// Configs & Groups
+	v1.Get("/configs", mw.RequireUser(), configs.ListConfigsHandler(client))
+	v1.Get("/configs/visible", mw.RequireUser(), configs.VisibleConfigsHandler(client))
+	v1.Post("/configs", mw.RequireUser(), configs.CreateConfigHandler(client))
+	v1.Delete("/configs/:id", mw.RequireUser(), configs.DeleteConfigHandler(client))
+	v1.Post("/configs/:id/share/groups", mw.RequireUser(), configs.ShareToGroupsHandler(client))
+	v1.Post("/configs/:id/unshare/groups", mw.RequireUser(), configs.UnshareFromGroupsHandler(client))
+	v1.Post("/configs/:id/share/user/:user_id", mw.RequireUser(), configs.ShareToUserHandler(client))
+	v1.Post("/configs/:id/unshare/user/:user_id", mw.RequireUser(), configs.UnshareFromUserHandler(client))
+
+	v1.Get("/groups", mw.RequireUser(), groups.ListMyGroupsHandler(client))
+	v1.Post("/groups", mw.RequireUser(), groups.CreateGroupHandler(client))
+	v1.Delete("/groups/:id", mw.RequireUser(), groups.DeleteGroupHandler(client))
 }

@@ -2,6 +2,7 @@ package httpx
 
 import (
 	"fiber-ent-apollo-pg/pkg"
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -30,6 +31,9 @@ func RegisterCommonMiddlewares(app *fiber.App) {
 		err := c.Next()
 		latency := pkg.SmartDurationFormat(time.Since(start))
 		c.Set("X-Response-Time", latency)
+		// Add Server-Timing header in milliseconds for client observability
+		durMs := time.Since(start).Milliseconds()
+		c.Set("Server-Timing", fmt.Sprintf("app;dur=%d", durMs))
 		rid := kit.RequestID(c)
 		httpxLogger.Info("access",
 			zap.String("method", c.Method()),

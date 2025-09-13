@@ -74,6 +74,30 @@ definitions:
         example: Bearer
         type: string
     type: object
+  configs.CreateConfigRequest:
+    properties:
+      data:
+        additionalProperties: {}
+        type: object
+      name:
+        type: string
+    type: object
+  configs.ShareToGroupsRequest:
+    properties:
+      group_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  groups.CreateGroupRequest:
+    properties:
+      member_ids:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+    type: object
   users.UserCreateRequest:
     properties:
       display_name:
@@ -440,6 +464,434 @@ paths:
       summary: Register (password)
       tags:
       - auth
+  /api/v1/configs:
+    get:
+      consumes:
+      - application/json
+      description: Returns configs owned by the current user
+      parameters:
+      - default: 20
+        description: page size
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List my configs
+      tags:
+      - configs
+    post:
+      consumes:
+      - application/json
+      description: Create a config owned by the current user
+      parameters:
+      - description: config payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/configs.CreateConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create config
+      tags:
+      - configs
+  /api/v1/configs/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a config (owner only)
+      parameters:
+      - description: Config UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Delete config
+      tags:
+      - configs
+  /api/v1/configs/{id}/share/groups:
+    post:
+      consumes:
+      - application/json
+      description: Share a config to specified groups (owner only)
+      parameters:
+      - description: Config UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: group ids
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/configs.ShareToGroupsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Share to groups
+      tags:
+      - configs
+  /api/v1/configs/{id}/share/user/{user_id}:
+    post:
+      consumes:
+      - application/json
+      description: Share a config to a user (creates a 2-person group if needed)
+      parameters:
+      - description: Config UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Target User UUID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Share to user
+      tags:
+      - configs
+  /api/v1/configs/{id}/unshare/groups:
+    post:
+      consumes:
+      - application/json
+      description: Remove group sharing (owner only)
+      parameters:
+      - description: Config UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: group ids
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/configs.ShareToGroupsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Unshare from groups
+      tags:
+      - configs
+  /api/v1/configs/{id}/unshare/user/{user_id}:
+    post:
+      consumes:
+      - application/json
+      description: Remove sharing from the DM group (owner only)
+      parameters:
+      - description: Config UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Target User UUID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Unshare from user
+      tags:
+      - configs
+  /api/v1/configs/visible:
+    get:
+      consumes:
+      - application/json
+      description: Configs owned by me or shared to my groups
+      parameters:
+      - default: 20
+        description: page size
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List visible configs
+      tags:
+      - configs
+  /api/v1/groups:
+    get:
+      consumes:
+      - application/json
+      description: Groups that include the current user as member
+      parameters:
+      - default: 20
+        description: page size
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List my groups
+      tags:
+      - groups
+    post:
+      consumes:
+      - application/json
+      description: Create a group and add members (caller auto-included)
+      parameters:
+      - description: group payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/groups.CreateGroupRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create group
+      tags:
+      - groups
+  /api/v1/groups/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a group (member only)
+      parameters:
+      - description: Group UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Delete group
+      tags:
+      - groups
   /api/v1/users:
     get:
       consumes:

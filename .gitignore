@@ -25,4 +25,6 @@ coverage.out
 
 ent/
 !ent/generate.go
-!/ent/schema
+!ent/schema/
+
+

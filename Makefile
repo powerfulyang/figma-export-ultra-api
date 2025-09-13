@@ -18,7 +18,9 @@ dev:
 	air -c .air.toml
 
 lint:
-	golangci-lint run
+	go env -w GOTOOLCHAIN=go1.25.1
+	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.4.0 run
+	go env -w GOTOOLCHAIN=auto
 
 test:
 	go test ./...
