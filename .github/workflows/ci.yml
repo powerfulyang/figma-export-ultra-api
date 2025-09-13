@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies (tidy)
         run: go mod tidy
 
+      - name: Generate ent code
+        run: go generate ./...
+
       - name: Lint
         uses: golangci/golangci-lint-action@v8
         with:
