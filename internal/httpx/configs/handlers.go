@@ -24,6 +24,13 @@ type CreateConfigRequest struct {
 	Data map[string]any `json:"data"`
 }
 
+// UpdateConfigRequest is the request body for updating a config item
+// swagger:model UpdateConfigRequest
+type UpdateConfigRequest struct {
+	Name *string         `json:"name,omitempty"`
+	Data *map[string]any `json:"data,omitempty"`
+}
+
 // ShareToGroupsRequest is the request body for sharing a config to groups
 // swagger:model ShareToGroupsRequest
 type ShareToGroupsRequest struct {
@@ -108,6 +115,68 @@ func CreateConfigHandler(client *ent.Client) fiber.Handler {
 			return kit.InternalError("create config failed", err.Error())
 		}
 		return kit.Created(c, created)
+	}
+}
+
+// UpdateConfigHandler updates a config owned by the current user.
+//
+//	@Summary      Update config
+//	@Description  Update a config (owner only)
+//	@Tags         configs
+//	@Accept       json
+//	@Produce      json
+//	@Param        id    path  string                    true  "Config UUID"
+//	@Param        body  body  configs.UpdateConfigRequest  true  "config payload"
+//	@Success      200   {object}  map[string]interface{}
+//	@Failure      400   {object}  map[string]interface{}
+//	@Failure      401   {object}  map[string]interface{}
+//	@Failure      403   {object}  map[string]interface{}
+//	@Failure      404   {object}  map[string]interface{}
+//	@Router       /api/v1/configs/{id} [put]
+func UpdateConfigHandler(client *ent.Client) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ac, _ := c.Locals("auth").(*mw.AuthContext)
+		if ac == nil || ac.Kind != "user" || !strings.HasPrefix(ac.Subject, "user:") {
+			return fiber.ErrUnauthorized
+		}
+		ownerID, err := uuid.Parse(strings.TrimPrefix(ac.Subject, "user:"))
+		if err != nil {
+			return fiber.ErrUnauthorized
+		}
+		cfgID, err := uuid.Parse(c.Params("id"))
+		if err != nil {
+			return kit.BadRequest("invalid config id", c.Params("id"))
+		}
+
+		var req UpdateConfigRequest
+		if err := c.BodyParser(&req); err != nil {
+			return kit.BadRequest("invalid request body", nil)
+		}
+
+		ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
+		defer cancel()
+
+		cfg, err := client.ConfigItem.Query().Where(configitem.IDEQ(cfgID)).WithOwner().Only(ctx)
+		if err != nil || cfg.Edges.Owner == nil {
+			return kit.NotFound("config not found")
+		}
+		if cfg.Edges.Owner.ID != ownerID {
+			return fiber.ErrForbidden
+		}
+
+		upd := client.ConfigItem.UpdateOneID(cfgID)
+		if req.Name != nil && strings.TrimSpace(*req.Name) != "" {
+			upd = upd.SetName(*req.Name)
+		}
+		if req.Data != nil {
+			upd = upd.SetData(*req.Data)
+		}
+
+		updated, err := upd.Save(ctx)
+		if err != nil {
+			return kit.InternalError("update config failed", err.Error())
+		}
+		return kit.OK(c, updated)
 	}
 }
 

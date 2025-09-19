@@ -12,6 +12,7 @@ import (
 	"fiber-ent-apollo-pg/internal/httpx/configs"
 	"fiber-ent-apollo-pg/internal/httpx/groups"
 	"fiber-ent-apollo-pg/internal/httpx/mw"
+	"fiber-ent-apollo-pg/internal/httpx/projects"
 	"fiber-ent-apollo-pg/internal/httpx/users"
 	"fiber-ent-apollo-pg/internal/mqx"
 	"fiber-ent-apollo-pg/internal/redisx"
@@ -71,6 +72,7 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 	v1.Get("/configs", mw.RequireUser(), configs.ListConfigsHandler(client))
 	v1.Get("/configs/visible", mw.RequireUser(), configs.VisibleConfigsHandler(client))
 	v1.Post("/configs", mw.RequireUser(), configs.CreateConfigHandler(client))
+	v1.Put("/configs/:id", mw.RequireUser(), configs.UpdateConfigHandler(client))
 	v1.Delete("/configs/:id", mw.RequireUser(), configs.DeleteConfigHandler(client))
 	v1.Post("/configs/:id/share/groups", mw.RequireUser(), configs.ShareToGroupsHandler(client))
 	v1.Post("/configs/:id/unshare/groups", mw.RequireUser(), configs.UnshareFromGroupsHandler(client))
@@ -80,4 +82,17 @@ func Register(app *fiber.App, client *ent.Client, providers ...*Providers) {
 	v1.Get("/groups", mw.RequireUser(), groups.ListMyGroupsHandler(client))
 	v1.Post("/groups", mw.RequireUser(), groups.CreateGroupHandler(client))
 	v1.Delete("/groups/:id", mw.RequireUser(), groups.DeleteGroupHandler(client))
+
+	// Projects
+	v1.Get("/projects", mw.RequireUser(), projects.ListProjectsHandler(client))
+	v1.Post("/projects", mw.RequireUser(), projects.CreateProjectHandler(client))
+	v1.Get("/projects/:id", mw.RequireUser(), projects.GetProjectHandler(client))
+	v1.Put("/projects/:id", mw.RequireUser(), projects.UpdateProjectHandler(client))
+	v1.Delete("/projects/:id", mw.RequireUser(), projects.DeleteProjectHandler(client))
+
+	// Project Configs
+	v1.Get("/projects/:id/configs", mw.RequireUser(), projects.ListProjectConfigsHandler(client))
+	v1.Post("/projects/:id/configs", mw.RequireUser(), projects.AddConfigToProjectHandler(client))
+	v1.Delete("/projects/:id/configs/:config_id", mw.RequireUser(), projects.RemoveConfigFromProjectHandler(client))
+	v1.Put("/projects/:id/active-config", mw.RequireUser(), projects.SetActiveConfigHandler(client))
 }

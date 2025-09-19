@@ -1,4 +1,4 @@
-FROM golang:1.25.1-alpine AS builder
+FROM golang:alpine AS builder
 
 # 安装必要的工具
 RUN apk add --no-cache git ca-certificates tzdata
@@ -30,7 +30,7 @@ RUN go build \
     ./cmd/server
 
 # 运行阶段 - 使用最小化的基础镜像
-FROM alpine
+FROM alpine:3
 
 # 安装运行时必需的包
 RUN apk --no-cache add ca-certificates tzdata

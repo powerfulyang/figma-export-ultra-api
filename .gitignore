@@ -23,8 +23,13 @@ dist/
 # Go coverage output files
 coverage.out
 
-ent/
+# 忽略 ent 下所有内容
+ent/*
+
+# 但保留 generate.go
 !ent/generate.go
+
+# 保留 schema 整个目录
 !ent/schema/
 
 

@@ -11,36 +11,37 @@ import (
 	"github.com/google/uuid"
 )
 
-// ConfigItem represents a user-saved configuration that can be shared.
-type ConfigItem struct{ ent.Schema }
+// Project represents a project that can have multiple config items.
+type Project struct{ ent.Schema }
 
-// Fields defines the fields for the ConfigItem entity.
-func (ConfigItem) Fields() []ent.Field {
+// Fields defines the fields for the Project entity.
+func (Project) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		field.String("name").NotEmpty().MaxLen(255),
-		field.JSON("data", map[string]any{}),
+		field.String("url").NotEmpty().MaxLen(255),
+		field.String("description").Optional().MaxLen(1000),
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 	}
 }
 
-// Edges defines the relationships for the ConfigItem entity.
-func (ConfigItem) Edges() []ent.Edge {
+// Edges defines the relationships for the Project entity.
+func (Project) Edges() []ent.Edge {
 	return []ent.Edge{
 		// owner user (required)
 		edge.To("owner", User.Type).Unique().Required(),
-		// shared to groups (many-to-many)
-		edge.To("shared_groups", Group.Type),
-		// project configs (inverse of ProjectConfig.config_item)
-		edge.From("project_configs", ProjectConfig.Type).Ref("config_item"),
+		// project configs (one-to-many)
+		edge.From("project_configs", ProjectConfig.Type).Ref("project"),
 	}
 }
 
-// Indexes defines indexes for the ConfigItem entity.
-func (ConfigItem) Indexes() []ent.Index {
+// Indexes defines indexes for the Project entity.
+func (Project) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Edges("owner"),
 		index.Fields("updated_at"),
+		// url is unique per owner
+		index.Edges("owner").Fields("url").Unique(),
 	}
 }
